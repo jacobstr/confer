@@ -249,6 +249,22 @@ func TestMarshal(t *testing.T) {
 	assert.Equal(t, &C, &config{Name: "Steve", Port: 1234})
 }
 
+func TestDeepAccess(t *testing.T) {
+	assert.Equal(t, "leather", Get("clothing.jacket"))
+}
+
+func TestDeepBindEnv(t *testing.T) {
+	BindEnv("clothing.jacket")
+	os.Setenv("CLOTHING__JACKET", "peacoat")
+	assert.Equal(t, "peacoat", Get("clothing.jacket"))
+}
+
+func TestDeepAutomaticEnv(t *testing.T) {
+	AutomaticEnv()
+	os.Setenv("CLOTHING__JACKET", "jean")
+	assert.Equal(t, "jean", Get("clothing.jacket"))
+}
+
 func TestBindPFlag(t *testing.T) {
 	var testString = "testing"
 	var testValue = newStringValue(testString, &testString)

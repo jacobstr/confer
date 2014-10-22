@@ -69,6 +69,7 @@ var configFile string
 var configType string
 
 var config map[string]interface{} = make(map[string]interface{})
+var config_index map[string]interface{} = make(map[string]interface{})
 var override map[string]interface{} = make(map[string]interface{})
 var env map[string]string = make(map[string]string)
 var defaults map[string]interface{} = make(map[string]interface{})
@@ -227,7 +228,7 @@ func Marshal(rawVal interface{}) error {
 		return err
 	}
 
-	insensativiseMaps()
+	indexMaps()
 
 	return nil
 }
@@ -266,7 +267,7 @@ func BindEnv(input ...string) (err error) {
 	key = strings.ToLower(input[0])
 
 	if len(input) == 1 {
-		envkey = strings.ToUpper(key)
+		envkey = strings.Replace(strings.ToUpper(key), ".", "__", -1)
 	} else {
 		envkey = input[1]
 	}
@@ -298,6 +299,8 @@ func find(key string) interface{} {
 		return val
 	}
 
+	// Periods are not supported. Allow the usage of double underscores to specify
+	// nested configuration options.
 	envkey, exists := env[key]
 	if exists {
 		jww.TRACE.Println(key, "registered as env var", envkey)
@@ -309,7 +312,7 @@ func find(key string) interface{} {
 		}
 	}
 
-	val, exists = config[key]
+	val, exists = config_index[key]
 	if exists {
 		jww.TRACE.Println(key, "found in config:", val)
 		return val
@@ -365,7 +368,7 @@ func IsSet(key string) bool {
 // Have viper check ENV variables for all
 // keys set in config, default & flags
 func AutomaticEnv() {
-	for _, x := range AllKeys() {
+	for _, x := range AllDeepKeys() {
 		BindEnv(x)
 	}
 }
@@ -386,8 +389,8 @@ func registerAlias(alias string, key string) {
 			// name, we'll never be able to get that value using the original
 			// name, so move the config value to the new realkey.
 			if val, ok := config[alias]; ok {
-				delete(config, alias)
-				config[key] = val
+				delete(config_index, alias)
+				config_index[key] = val
 			}
 			if val, ok := kvstore[alias]; ok {
 				delete(kvstore, alias)
@@ -431,7 +434,7 @@ func InConfig(key string) bool {
 func SetDefault(key string, value interface{}) {
 	// If alias passed in, then set the proper default
 	key = realKey(strings.ToLower(key))
-	defaults[key] = value
+	defaults[strings.ToLower(key)] = value
 }
 
 // The user provided value (via flag)
@@ -493,14 +496,12 @@ func MarshallReader(in io.Reader, c map[string]interface{}) {
 		}
 	}
 
-	insensativiseMap(c)
+	indexMap(c, "', config_index)
 }
 
-func insensativiseMaps() {
-	insensativiseMap(config)
-	insensativiseMap(defaults)
-	insensativiseMap(override)
-	insensativiseMap(kvstore)
+func indexMaps() {
+	indexMap(config, "", config_index)
+    indexMap(kv_store, "", kvstore_index)
 }
 
 // retrieve the first found remote configuration
@@ -556,14 +557,61 @@ func getRemoteConfig(provider *remoteProvider) (map[string]interface{}, error) {
 	return kvstore, err
 }
 
-func insensativiseMap(m map[string]interface{}) {
+// Creates a flat index consisting of materialized paths into the potentially
+// nested config structure we've loaded from various sources. The index allows us
+// to access the original map contents in a case insensitive manner without
+// having to modify the original keys - which may lead to unexpected results
+// depending on how a user intends to use the config variable (e.g. passing the
+// entire map to function that may not be case-insensitive) or accessing nested
+// keys via materialized paths.
+func indexMap(m map[string]interface{}, path string, index map[string]interface{}) {
 	for key, val := range m {
 		lower := strings.ToLower(key)
-		if key != lower {
-			delete(m, key)
-			m[lower] = val
+		var joined_key string
+		if len(path) > 0 {
+			joined_key = path + "." + lower
+		} else {
+			joined_key = lower
+		}
+		index[joined_key] = val
+		if reflect.TypeOf(val).Kind() == reflect.Map {
+			// YAML maps may be map[interface{}]interface{}
+			indexMap(cast.ToStringMap(val), joined_key, index)
 		}
 	}
+}
+
+// AllDeepKeys returns all keys, including deep materialized paths.
+func AllDeepKeys() []string {
+	all := map[string]struct{}{}
+	var traverse func(m map[string]interface{}, path string)
+	traverse = func(m map[string]interface{}, path string) {
+		for key, val := range m {
+			lower := strings.ToLower(key)
+			var joined_key string
+			if len(path) > 0 {
+				joined_key = path + "." + lower
+			} else {
+				joined_key = lower
+			}
+
+			all[joined_key] = struct{}{}
+			if reflect.TypeOf(val).Kind() == reflect.Map {
+				traverse(cast.ToStringMap(val), joined_key)
+			}
+		}
+	}
+
+	traverse(defaults, "")
+	traverse(config, "")
+	traverse(override, "")
+
+	a := []string{}
+	for x, _ := range all {
+		a = append(a, x)
+	}
+
+	return a
 }
 
 func AllKeys() []string {
@@ -587,7 +635,8 @@ func AllKeys() []string {
 
 	a := []string{}
 	for x, _ := range m {
-		a = append(a, x)
+		// LowerCase the key for backwards-compatibility.
+		a = append(a, strings.ToLower(x))
 	}
 
 	return a
@@ -786,6 +835,7 @@ func Reset() {
 
 	kvstore = make(map[string]interface{})
 	config = make(map[string]interface{})
+	config_index = make(map[string]interface{})
 	override = make(map[string]interface{})
 	env = make(map[string]string)
 	defaults = make(map[string]interface{})
