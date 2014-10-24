@@ -306,5 +306,14 @@ func TestBoundCaseSensitivity(t *testing.T) {
 
 	BindPFlag("eYEs", flag)
 	assert.Equal(t, "green", Get("eyes"))
+}
 
+func TestDeepAlias(t *testing.T) {
+	RegisterAlias("jacket", "clothing.jacket")
+	assert.Equal(t, "jean", Get("jacket"))
+}
+
+func TestDeepAliasCase(t *testing.T) {
+	RegisterAlias("jacket", "clothing.Jacket")
+	assert.Equal(t, "jean", Get("jacket"))
 }
