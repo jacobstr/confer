@@ -70,6 +70,17 @@ Viper configuration keys are case insensitive.
         fmt.Println("verbose enabled")
 	}
 
+### Deep Configuration Data
+
+	// Materialized paths allow for deep traversal of nested config data.
+	logger_config := viper.GetStringMap("logger.stdout")
+	// Or, go even deeper.
+	logger_base_path := viper.GetString("logger.stdout.base_path")
+
+	// Periods are not valid environment variable names, replace
+	// materialized path periods with double underscores.
+	LOGGER__STDOUT__BASE_PATH=/var/log/myapp go run server.go
+
 ### Remote Key/Value Store Support
 Viper will read a config string (as JSON, TOML, or YAML) retrieved from a
 path in a Key/Value store such as Etcd or Consul.  These values take precedence
