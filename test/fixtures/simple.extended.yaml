@@ -1,0 +1,8 @@
+---
+app:
+  hello:
+    10
+  world:
+    5
+  stuff:
+    woot: 5

@@ -1,0 +1,10 @@
+---
+app:
+  logging:
+    level: info
+  database:
+    host: localhost
+    user: postgres
+    password: spend_an_hour_tweaking_your_pg_hba_for_this
+  server:
+    workers: null

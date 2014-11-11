@@ -1,0 +1,13 @@
+---
+app:
+  root: /home/ubuntu/killer_project
+  logging: debug
+  server:
+    workers: 1
+    static_assets:
+      - css
+      - js
+      - img
+      - fonts
+
+

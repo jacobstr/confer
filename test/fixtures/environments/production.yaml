@@ -1,0 +1,11 @@
+---
+app:
+  root: /opt/disruptive_enterprise_platform
+  logging: debug
+  database:
+    host: .s.PGSQL.5432
+    user: postgres
+    password: whatever
+  server:
+    # Should clobber defaults.rb
+    static_assets: null
