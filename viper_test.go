@@ -6,15 +6,13 @@
 package viper
 
 import (
-	"bytes"
 	"fmt"
 	"os"
-	"sort"
 	"testing"
-	"time"
+	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/spf13/pflag"
-	"github.com/stretchr/testify/assert"
+	"github.com/jacobstr/viper/reader"
 )
 
 var yamlExample = []byte(`Hacker: true
@@ -29,6 +27,14 @@ clothing:
 age: 35
 eyes : brown
 beard: true
+`)
+
+var yamlOverride = []byte(`Hacker: false
+name: steve
+hobbies:
+- skateboarding
+- dancing
+awesomeness: supreme
 `)
 
 var tomlExample = []byte(`
@@ -60,6 +66,35 @@ var remoteExample = []byte(`{
 "newkey":"remote"
 }`)
 
+
+var application_yaml = map[string]interface{} {
+	"logging": map[string]interface{} {
+		"level" : "info",
+	},
+	"database": map[string]interface{} {
+		"host" : "localhost",
+		"user" : "postgres",
+		"password" : "spend_an_hour_tweaking_your_pg_hba_for_this",
+	},
+	"server": map[string]interface{} {
+		"workers" : nil,
+	},
+}
+
+var app_dev_yaml = map[string]interface{} {
+	"root": "/home/ubuntu/killer_project",
+	"logging": "debug",
+	"database": map[string]interface{} {
+		"host" : "localhost",
+		"user" : "postgres",
+		"password" : "spend_an_hour_tweaking_your_pg_hba_for_this",
+	},
+	"server": map[string]interface{} {
+		"workers" : 1,
+		"static_assets": []interface{}{ "css", "js", "img" , "fonts" },
+	},
+}
+
 //stubs for PFlag Values
 type stringValue string
 
@@ -81,239 +116,154 @@ func (s *stringValue) String() string {
 	return fmt.Sprintf("%s", *s)
 }
 
-func TestBasics(t *testing.T) {
-	SetConfigFile("/tmp/config.yaml")
-	assert.Equal(t, "/tmp/config.yaml", getConfigFile())
-}
+func TestSpec(t *testing.T) {
+	Convey("Map-Like Config Sources", t, func() {
+		config := NewConfiguration()
+		config.SetDefault("age", 45)
 
-func TestDefault(t *testing.T) {
-	SetDefault("age", 45)
-	assert.Equal(t, 45, Get("age"))
-}
+		Convey("Getting a default", func() {
+			So(config.Get("age"), ShouldEqual, 45)
+		})
 
-func TestMarshalling(t *testing.T) {
-	SetConfigType("yaml")
-	r := bytes.NewReader(yamlExample)
+		Convey("Marhsalling", func() {
+			Convey("Yaml", func() {
+				yaml, _ := reader.Readbytes(yamlExample, "yaml")
+				config.MergeAttributes(yaml)
 
-	MarshallReader(r, config)
-	assert.True(t, InConfig("name"))
-	assert.False(t, InConfig("state"))
-	assert.Equal(t, "steve", Get("name"))
-	assert.Equal(t, []interface{}{"skateboarding", "snowboarding", "go"}, Get("hobbies"))
-	assert.Equal(t, map[interface{}]interface{}{"jacket": "leather", "trousers": "denim"}, Get("clothing"))
-	assert.Equal(t, 35, Get("age"))
-}
+				Convey("Existence checks", func() {
+					So(config.InConfig("name"), ShouldEqual, true)
+					So(config.InConfig("state"), ShouldEqual, false)
+				})
 
-func TestOverrides(t *testing.T) {
-	Set("age", 40)
-	assert.Equal(t, 40, Get("age"))
-}
+				Convey("Strings", func() {
+					So(config.Get("name"), ShouldEqual, "steve")
+				})
 
-func TestDefaultPost(t *testing.T) {
-	assert.NotEqual(t, "NYC", Get("state"))
-	SetDefault("state", "NYC")
-	assert.Equal(t, "NYC", Get("state"))
-}
+				Convey("Arrays", func() {
+					So(
+						config.Get("hobbies"),
+						ShouldResemble,
+						[]interface{} {"skateboarding", "snowboarding", "go"},
+					)
+				})
 
-func TestAliases(t *testing.T) {
-	RegisterAlias("years", "age")
-	assert.Equal(t, 40, Get("years"))
-	Set("years", 45)
-	assert.Equal(t, 45, Get("age"))
-}
+				Convey("Integers", func() {
+					So(config.Get("age"), ShouldEqual, 35)
+				})
 
-func TestAliasInConfigFile(t *testing.T) {
-	// the config file specifies "beard".  If we make this an alias for
-	// "hasbeard", we still want the old config file to work with beard.
-	RegisterAlias("beard", "hasbeard")
-	assert.Equal(t, true, Get("hasbeard"))
-	Set("hasbeard", false)
-	assert.Equal(t, false, Get("beard"))
-}
+				Convey("Merging", func() {
+					yaml, _ := reader.Readbytes(yamlOverride, "yaml")
+					config.MergeAttributes(yaml)
+					So(config.Get("awesomeness"), ShouldEqual, "supreme")
+					So(config.Get("hobbies"), ShouldResemble, []interface{} { "skateboarding", "dancing" })
+				})
+			})
 
-func TestYML(t *testing.T) {
-	Reset()
-	SetConfigType("yml")
-	r := bytes.NewReader(yamlExample)
+			Convey("Toml", func() {
+				toml, _ := reader.Readbytes(tomlExample, "toml")
+				config.MergeAttributes(toml)
+				So(config.Get("owner.organization"), ShouldEqual, "MongoDB")
+			})
 
-	MarshallReader(r, config)
-	assert.Equal(t, "steve", Get("name"))
-}
+			Convey("Json", func() {
+				json, _ := reader.Readbytes(jsonExample, "json")
+				config.MergeAttributes(json)
+				So(config.Get("ppu"), ShouldEqual, 0.55)
+			})
+		})
 
-func TestJSON(t *testing.T) {
-	SetConfigType("json")
-	r := bytes.NewReader(jsonExample)
+		Convey("Defaults, Overrides, Files", func() {
+			Convey("Defaults", func() {
+				config.SetDefault("clothing.jacket", "poncho")
+				config.SetDefault("age", 99)
 
-	MarshallReader(r, config)
-	assert.Equal(t, "0001", Get("id"))
-}
+				So(config.Get("clothing.jacket"), ShouldEqual, "poncho")
+				So(config.Get("age"), ShouldEqual, 99)
 
-func TestTOML(t *testing.T) {
-	SetConfigType("toml")
-	r := bytes.NewReader(tomlExample)
+				Convey("Files should clobber defaults", func() {
+					yaml, _ := reader.Readbytes(yamlExample, "yaml")
+					config.MergeAttributes(yaml)
 
-	MarshallReader(r, config)
-	assert.Equal(t, "TOML Example", Get("title"))
-}
+					So(config.Get("clothing.jacket"), ShouldEqual, "leather")
+					So(config.Get("age"), ShouldEqual, 35)
 
-func TestRemotePrecedence(t *testing.T) {
-	SetConfigType("json")
-	r := bytes.NewReader(jsonExample)
-	MarshallReader(r, config)
-	remote := bytes.NewReader(remoteExample)
-	assert.Equal(t, "0001", Get("id"))
-	MarshallReader(remote, kvstore)
-	assert.Equal(t, "0001", Get("id"))
-	assert.NotEqual(t, "cronut", Get("type"))
-	assert.Equal(t, "remote", Get("newkey"))
-	Set("newkey", "newvalue")
-	assert.NotEqual(t, "remote", Get("newkey"))
-	assert.Equal(t, "newvalue", Get("newkey"))
-	Set("newkey", "remote")
-}
+					Convey("Overrides should clobber files", func() {
+						config.Set("clothing.jacket", "peacoat")
+						config.Set("age", 30)
+						So(config.Get("clothing.jacket"), ShouldEqual, "peacoat")
+						So(config.Get("age"), ShouldEqual, 30)
+					})
+				})
+			})
+		})
 
-func TestEnv(t *testing.T) {
-	SetConfigType("json")
-	r := bytes.NewReader(jsonExample)
-	MarshallReader(r, config)
-	BindEnv("id")
-	BindEnv("f", "FOOD")
+		Convey("PFlags", func() {
+			testString := "testing"
+			testValue := newStringValue(testString, &testString)
 
-	os.Setenv("ID", "13")
-	os.Setenv("FOOD", "apple")
-	os.Setenv("NAME", "crunk")
+			flag := &pflag.Flag{
+				Name:    "testflag",
+				Value:   testValue,
+				Changed: false,
+			}
 
-	assert.Equal(t, "13", Get("id"))
-	assert.Equal(t, "apple", Get("f"))
-	assert.Equal(t, "Cake", Get("name"))
+			// Initial assertions after binding.
+			config.BindPFlag("testvalue", flag)
+			So(config.Get("testvalue"), ShouldEqual, "testing")
 
-	AutomaticEnv()
+			Convey("Insensitivity before mutation", func() {
+				So(config.Get("testValue"), ShouldEqual, "testing")
+			})
 
-	assert.Equal(t, "crunk", Get("name"))
-}
+			flag.Value.Set("testing_mutate")
+			flag.Changed = true //hack for pflag usage
+			So(config.Get("testvalue"), ShouldEqual, "testing_mutate")
 
-func TestAllKeys(t *testing.T) {
-	ks := sort.StringSlice{"title", "newkey", "owner", "name", "beard", "ppu", "batters", "hobbies", "clothing", "age", "hacker", "id", "type", "eyes"}
-	dob, _ := time.Parse(time.RFC3339, "1979-05-27T07:32:00Z")
-	all := map[string]interface{}{"hacker": true, "beard": true, "newkey": "remote", "batters": map[string]interface{}{"batter": []interface{}{map[string]interface{}{"type": "Regular"}, map[string]interface{}{"type": "Chocolate"}, map[string]interface{}{"type": "Blueberry"}, map[string]interface{}{"type": "Devil's Food"}}}, "hobbies": []interface{}{"skateboarding", "snowboarding", "go"}, "ppu": 0.55, "clothing": map[interface{}]interface{}{"jacket": "leather", "trousers": "denim"}, "name": "crunk", "owner": map[string]interface{}{"organization": "MongoDB", "Bio": "MongoDB Chief Developer Advocate & Hacker at Large", "dob": dob}, "id": "13", "title": "TOML Example", "age": 35, "type": "donut", "eyes": "brown"}
+			Convey("Insensitivity after mutation", func() {
+				So(config.Get("testValue"), ShouldEqual, "testing_mutate")
+			})
+		})
+	})
 
-	var allkeys sort.StringSlice
-	allkeys = AllKeys()
-	allkeys.Sort()
-	ks.Sort()
+	Convey("ReadPaths", t, func(){
 
-	assert.Equal(t, ks, allkeys)
-	assert.Equal(t, all, AllSettings())
-}
+		Convey("Single Path", func() {
+			config := NewConfiguration()
+			config.ReadPaths("test/fixtures/application.yaml")
+			So(config.GetStringMap("app"), ShouldResemble, application_yaml)
+		})
 
-func TestCaseInSensitive(t *testing.T) {
-	assert.Equal(t, true, Get("hacker"))
-	Set("Title", "Checking Case")
-	assert.Equal(t, "Checking Case", Get("tItle"))
-}
+		Convey("Multiple Paths", func() {
+			config := NewConfiguration()
+			Convey("With A Missing File", func() {
+				config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/missing.yaml")
+				So(config.GetStringMap("app"), ShouldResemble, application_yaml)
+			})
 
-func TestAliasesOfAliases(t *testing.T) {
-	RegisterAlias("Foo", "Bar")
-	RegisterAlias("Bar", "Title")
-	assert.Equal(t, "Checking Case", Get("FOO"))
-}
+			Convey("With An Augmented Environment", func() {
+				config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/environments/development.yaml")
+				So(config.GetStringMap("app"), ShouldResemble, app_dev_yaml)
 
-func TestRecursiveAliases(t *testing.T) {
-	RegisterAlias("Baz", "Roo")
-	RegisterAlias("Roo", "baz")
-}
+				Convey("Deep access", func() {
+					So(config.GetString("app.database.host"), ShouldEqual, "localhost")
+				})
+			})
+		})
+	})
 
-func TestMarshal(t *testing.T) {
-	SetDefault("port", 1313)
-	Set("name", "Steve")
+	Convey("Environment Variables", t, func() {
+		config := NewConfiguration()
+		config.ReadPaths("test/fixtures/application.yaml")
+		Convey("Automatic Env", func() {
+			os.Setenv("APP_LOGGING_LEVEL", "trace")
+			config.AutomaticEnv()
+			So(config.Get("app.logging.level"), ShouldEqual, "trace")
+		})
+	})
 
-	type config struct {
-		Port int
-		Name string
-	}
-
-	var C config
-
-	err := Marshal(&C)
-	if err != nil {
-		t.Fatalf("unable to decode into struct, %v", err)
-	}
-
-	assert.Equal(t, &C, &config{Name: "Steve", Port: 1313})
-
-	Set("port", 1234)
-	err = Marshal(&C)
-	if err != nil {
-		t.Fatalf("unable to decode into struct, %v", err)
-	}
-	assert.Equal(t, &C, &config{Name: "Steve", Port: 1234})
-}
-
-func TestDeepAccess(t *testing.T) {
-	assert.Equal(t, "leather", Get("clothing.jacket"))
-}
-
-func TestDeepBindEnv(t *testing.T) {
-	BindEnv("clothing.jacket")
-	os.Setenv("CLOTHING__JACKET", "peacoat")
-	assert.Equal(t, "peacoat", Get("clothing.jacket"))
-}
-
-func TestDeepAutomaticEnv(t *testing.T) {
-	AutomaticEnv()
-	os.Setenv("CLOTHING__JACKET", "jean")
-	assert.Equal(t, "jean", Get("clothing.jacket"))
-}
-
-func TestBindPFlag(t *testing.T) {
-	var testString = "testing"
-	var testValue = newStringValue(testString, &testString)
-
-	flag := &pflag.Flag{
-		Name:    "testflag",
-		Value:   testValue,
-		Changed: false,
-	}
-
-	BindPFlag("testvalue", flag)
-
-	assert.Equal(t, testString, Get("testvalue"))
-
-	flag.Value.Set("testing_mutate")
-	flag.Changed = true //hack for pflag usage
-
-	assert.Equal(t, "testing_mutate", Get("testvalue"))
-
-}
-
-func TestBoundCaseSensitivity(t *testing.T) {
-
-	assert.Equal(t, "brown", Get("eyes"))
-
-	BindEnv("eYEs", "TURTLE_EYES")
-	os.Setenv("TURTLE_EYES", "blue")
-
-	assert.Equal(t, "blue", Get("eyes"))
-
-	var testString = "green"
-	var testValue = newStringValue(testString, &testString)
-
-	flag := &pflag.Flag{
-		Name:    "eyeballs",
-		Value:   testValue,
-		Changed: true,
-	}
-
-	BindPFlag("eYEs", flag)
-	assert.Equal(t, "green", Get("eyes"))
-}
-
-func TestDeepAlias(t *testing.T) {
-	RegisterAlias("jacket", "clothing.jacket")
-	assert.Equal(t, "jean", Get("jacket"))
-}
-
-func TestDeepAliasCase(t *testing.T) {
-	RegisterAlias("jacket", "clothing.Jacket")
-	assert.Equal(t, "jean", Get("jacket"))
+	Convey("Case Sensitivity", t, func() {
+		config := NewConfiguration()
+		config.ReadPaths("test/fixtures/application.yaml")
+		So(config.GetString("aPp.DatAbase.host"), ShouldResemble, "localhost")
+	})
 }

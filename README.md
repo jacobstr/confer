@@ -5,11 +5,19 @@ Go configuration with fangs
 
 ## What is Viper?
 
-Viper is a complete configuration solution. Designed to work within an
-application to handle file based configuration and seamlessly marry that with
-command line flags which can also be used to control application behavior.
-Viper also supports retrieving configuration values from remote key/value stores. 
-Etcd and Consul are supported. 
+A configuration management module that handles:
+
+1. Merging multiple configuration sources.
+
+   `config.ReadPaths("application.yaml", "environments/production.yaml")`
+
+2. Materialized path access of nested configuration data.
+
+   `config.GetInt('app.database.port')`
+
+3. Binding of environment variables to configuration data.
+
+  `APP_DATABASE_PORT=3456 go run app.go`
 
 ## Why Viper?
 
@@ -22,8 +30,7 @@ Viper does the following for you:
 1. Find, load and marshall a configuration file in YAML, TOML or JSON.
 2. Provide a mechanism to setDefault values for your different configuration options
 3. Provide a mechanism to setOverride values for options specified through command line flags.
-4. Provide an alias system to easily rename parameters without breaking existing code.
-5. Make it easy to tell the difference between when a user has provided a command line or config file which is the same as the default.
+4. Make it easy to tell the difference between when a user has provided a command line or config file which is the same as the default.
 
 Viper believes that:
 
@@ -37,90 +44,39 @@ Viper configuration keys are case insensitive.
 
 ### Initialization
 
-	viper.SetConfigName("config") // name of config file (without extension)
-	viper.AddConfigPath("/etc/appname/")   // path to look for the config file in
-	viper.AddConfigPath("$HOME/.appname")  // call multiple times to add many search paths
-	viper.ReadInConfig() // Find and read the config file
+    app = viper.NewConfiguration()
+    app.ReadPaths("application.yaml")
 
 ### Setting Defaults
 
-	viper.SetDefault("ContentDir", "content")
-	viper.SetDefault("LayoutDir", "layouts")
-	viper.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
+    app = viper.NewConfiguration()
+    app.ReadPaths("application.yaml")
+    app.SetDefault("ContentDir", "content")
+    app.SetDefault("LayoutDir", "layouts")
+    app.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
 
 ### Setting Overrides
 
-    viper.Set("Verbose", true)
-    viper.Set("LogFile", LogFile)
-
-### Registering and Using Aliases
-
-    viper.RegisterAlias("loud", "Verbose")
-
-    viper.Set("verbose", true) // same result as next line
-    viper.Set("loud", true)   // same result as prior line
-
-    viper.GetBool("loud") // true
-    viper.GetBool("verbose") // true
+    app.Set("verbose", true)
+    app.Set("logfile", "/var/log/app.log")
 
 ### Getting Values
 
-    viper.GetString("logfile") // case insensitive Setting & Getting
-	if viper.GetBool("verbose") {
-        fmt.Println("verbose enabled")
-	}
+    app.GetString("logFiLe") // case insensitive Setting & Getting
+    if app.GetBool("verbose") {
+      fmt.Println("verbose enabled")
+    }
 
 ### Deep Configuration Data
 
 	// Materialized paths allow for deep traversal of nested config data.
-	logger_config := viper.GetStringMap("logger.stdout")
+	logger_config := app.GetStringMap("logger.stdout")
 	// Or, go even deeper.
-	logger_base_path := viper.GetString("logger.stdout.base_path")
+	logger_base_path := app.GetString("logger.stdout.base_path")
 
 	// Periods are not valid environment variable names, replace
-	// materialized path periods with double underscores.
-	LOGGER__STDOUT__BASE_PATH=/var/log/myapp go run server.go
-
-### Remote Key/Value Store Support
-Viper will read a config string (as JSON, TOML, or YAML) retrieved from a
-path in a Key/Value store such as Etcd or Consul.  These values take precedence
-over default values, but are overriden by configuration values retrieved from disk, 
-flags, or environment variables.
-
-Viper uses [crypt](https://github.com/xordataexchange/crypt) to retrieve configuration
-from the k/v store, which means that you can store your configuration values
-encrypted and have them automatically decrypted if you have the correct
-gpg keyring.  Encryption is optional.
-
-You can use remote configuration in conjunction with local configuration, or
-independently of it.  
-
-`crypt` has a command-line helper that you can use to put configurations
-in your k/v store. `crypt` defaults to etcd on http://127.0.0.1:4001.
-
-	go get github.com/xordataexchange/crypt/bin/crypt
-	crypt set -plaintext /config/hugo.json /Users/hugo/settings/config.json
-
-Confirm that your value was set:
-
-	crypt get -plaintext /config/hugo.json
-
-See the `crypt` documentation for examples of how to set encrypted values, or how
-to use Consul.
-
-### Remote Key/Value Store Example - Unencrypted
-
-	viper.AddRemoteProvider("etcd", "http://127.0.0.1:4001","/config/hugo.json")
-	viper.SetConfigType("json") // because there is no file extension in a stream of bytes
-	err := viper.ReadRemoteConfig()
-
-### Remote Key/Value Store Example - Encrypted
-
-	viper.AddSecureRemoteProvider("etcd","http://127.0.0.1:4001","/config/hugo.json","/etc/secrets/mykeyring.gpg")
-	viper.SetConfigType("json") // because there is no file extension in a stream of bytes
-	err := viper.ReadRemoteConfig()
-
-
+	// materialized path periods with underscores.
+	LOGGER_STDOUT_BASE_PATH=/var/log/myapp go run server.go
 
 ## Q & A
 
@@ -141,5 +97,3 @@ application foundation needs.
 Q: Why is it called "Cobra"?
 
 A: Is there a better name for a commander?
-
-
