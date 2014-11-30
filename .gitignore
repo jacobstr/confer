@@ -21,4 +21,4 @@ _testmain.go
 
 *.exe
 *.test
-Godeps
+Godeps/_workspace
