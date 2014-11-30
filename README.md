@@ -1,6 +1,8 @@
 Confer
 ======
 
+[![Build Status](https://travis-ci.org/jacobstr/confer.svg)](https://travis-ci.org/jacobstr/confer)
+
 A [viper](http://gihub.com/spf13/viper) derived configuration management package. It started out as a fork but I started doing things in a dramatically different manner that it would be unmergable.
 
 Significant changes include:
