@@ -251,6 +251,13 @@ func TestSpec(t *testing.T) {
 				})
 			})
 		})
+
+		Convey("Rooted paths", func() {
+			config := NewConfiguration()
+			config.SetRootPath("test/fixtures")
+			config.ReadPaths("application.yaml")
+			So(config.GetStringMap("app"), ShouldResemble, application_yaml)
+		})
 	})
 
 	Convey("Environment Variables", t, func() {

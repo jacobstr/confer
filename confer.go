@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"path"
+	"path/filepath"
 
 	"github.com/kr/pretty"
 	"github.com/spf13/cast"
@@ -48,6 +50,9 @@ type ConfigManager struct {
 	// These ought to just be Configgers, but they're somewhat specialized.
 	pflags *PFlagSource
 	env    *EnvSource
+
+	// The root path for configuration files.
+	rootPath string
 }
 
 func NewConfiguration() *ConfigManager {
@@ -55,6 +60,7 @@ func NewConfiguration() *ConfigManager {
 	manager.pflags = NewPFlagSource()
 	manager.attributes = NewConfigSource()
 	manager.env = NewEnvSource()
+	manager.rootPath = ""
 
 	return manager
 }
@@ -213,6 +219,10 @@ func (manager *ConfigManager) Set(key string, value interface{}) {
 	manager.attributes.Set(key, value)
 }
 
+func (manager *ConfigManager) SetRootPath(path string) {
+	manager.rootPath = path
+}
+
 // Loads and sequentially + recursively merges the provided config arguments. Returns
 // an error if any of the files fail to load, though this may be expecte
 // in the case of search paths.
@@ -223,8 +233,16 @@ func (manager *ConfigManager) ReadPaths(paths ...string) error {
 	merged_config := manager.attributes.ToStringMap()
 	errs := []error{}
 
-	for _, path := range paths {
-		loaded, err = reader.Readfile(path)
+	for _, base_path := range paths {
+		var final_path string
+
+		if filepath.IsAbs(base_path) == false {
+			final_path = path.Join(manager.rootPath, base_path)
+		} else {
+			final_path = path.Join(manager.rootPath, base_path)
+		}
+
+		loaded, err = reader.Readfile(final_path)
 
 		if err != nil {
 			errs = append(errs, err)
