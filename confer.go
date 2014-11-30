@@ -20,18 +20,18 @@ package confer
 
 import (
 	"fmt"
-	"strings"
-	"time"
 	"path"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/kr/pretty"
 	"github.com/spf13/cast"
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/pflag"
 
-	. "github.com/jacobstr/confer/source"
 	"github.com/jacobstr/confer/reader"
+	. "github.com/jacobstr/confer/source"
 
 	errors "github.com/jacobstr/confer/errors"
 	"github.com/jacobstr/confer/maps"
@@ -206,7 +206,7 @@ func (manager *ConfigManager) InConfig(key string) bool {
 // Set the default value for this key.
 // Default only used when no value is provided by the user via flag, config or ENV.
 func (manager *ConfigManager) SetDefault(key string, value interface{}) {
-	if (!manager.IsSet(key)) {
+	if !manager.IsSet(key) {
 		manager.attributes.Set(key, value)
 	}
 }
@@ -246,7 +246,7 @@ func (manager *ConfigManager) ReadPaths(paths ...string) error {
 
 		if err != nil {
 			errs = append(errs, err)
-			break
+			continue
 		}
 
 		// In-place recursive coercion to stringmap.

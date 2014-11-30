@@ -1,16 +1,17 @@
 package reader
 
-import(
-	"path/filepath"
+import (
 	"io"
+	"path/filepath"
 	// "github.com/spf13/cast"
-	"io/ioutil"
 	"bytes"
 	"encoding/json"
-	"gopkg.in/yaml.v1"
+	"io/ioutil"
+
 	"github.com/BurntSushi/toml"
 	"github.com/jacobstr/confer/errors"
 	jww "github.com/spf13/jwalterweatherman"
+	"gopkg.in/yaml.v1"
 )
 
 type ConfigFormat string
@@ -77,7 +78,7 @@ func Readfile(path string) (interface{}, error) {
 
 	reader := bytes.NewReader(file)
 
-	cr := &ConfigReader{ Format: getConfigType(path), reader: reader }
+	cr := &ConfigReader{Format: getConfigType(path), reader: reader}
 	return cr.Export()
 }
 
@@ -92,10 +93,10 @@ func Readbytes(data []byte, format string) (interface{}, error) {
 
 func getConfigType(path string) string {
 	ext := filepath.Ext(path)
-	if len(ext) > 1 {
+	switch ext[1:] {
+	case "yml":
+		return "yaml"
+	default:
 		return ext[1:]
-	} else {
-		return ""
 	}
 }
-
