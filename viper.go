@@ -13,7 +13,6 @@
 // flag
 // env
 // config
-// key/value store
 // default
 
 package viper
@@ -205,9 +204,10 @@ func (manager *ConfigManager) SetDefault(key string, value interface{}) {
 	}
 }
 
-// The user provided value (via flag)
-// Will be used instead of values obtained via
-// config file, ENV, default, or key/value store
+// Explicitly sets a value. This is order dependent, e.g. it will override the current
+// value but may be overriden itself e.g. if one subsequently reads a YAML file. Therefore,
+// precedence is simply established by order in which you execute your configuration
+// instructions.
 func (manager *ConfigManager) Set(key string, value interface{}) {
 	manager.attributes.Set(key, value)
 }
