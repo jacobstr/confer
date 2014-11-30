@@ -66,9 +66,34 @@ func (self *ConfigSource) Get(key string) (val interface{}, exists bool) {
 
 // Set a key in a case insensitive manner.
 func (self *ConfigSource) Set(key string, val interface{}) {
-	self.data[key] = val
-	// self.index = make(map[string]string)
-	self.updateIndex(key, val)
+	index_key, index_exists := self.index[strings.ToLower(key)]
+	if (index_exists == false) {
+		index_key = key
+	}
+
+	path := strings.Split(index_key, ".")
+	current := self.data
+	for _, part := range(path[:len(path)-1]) {
+		jww.TRACE.Println("not doing much")
+		if reflect.TypeOf(current).Kind() != reflect.Map {
+			panic("doing bad stuff!")
+		} else {
+			var next interface{}
+			next, exists := current[part]
+			if exists == false {
+				current[part] = make(map[string]interface{})
+				current = current[part].(map[string]interface{})
+			} else {
+				current = next.(map[string]interface{})
+			}
+		}
+	}
+
+	current[path[len(path)-1]] = val
+	// This is quite ineffecient. Hopefully no one has a huge tree of config data.
+	// Could be optimized by traversing down only the ancestors of a given path.
+	// But it's generally necessary to update all ancestors when we stub out defaults.
+	self.UpdateIndices()
 }
 
 // Migrates data from map to a Configger instance.
@@ -107,7 +132,7 @@ func (self *ConfigSource) updateIndex(key string, data interface{}) {
 		if len(key) > 0 {
 			joined_key = key + "." + child_key
 		} else {
-			joined_key = key
+			joined_key = child_key
 		}
 		self.updateIndex(joined_key, val)
 	}
@@ -116,6 +141,7 @@ func (self *ConfigSource) updateIndex(key string, data interface{}) {
 // Index every key/value pair inside of this config sources's data.
 func (self *ConfigSource) UpdateIndices() {
 	for key, val := range self.data {
+		jww.TRACE.Println("update index", key)
 		self.updateIndex(key, val)
 	}
 }

@@ -119,9 +119,9 @@ func (s *stringValue) String() string {
 func TestSpec(t *testing.T) {
 	Convey("Map-Like Config Sources", t, func() {
 		config := NewConfiguration()
-		config.SetDefault("age", 45)
 
 		Convey("Getting a default", func() {
+			config.SetDefault("age", 45)
 			So(config.Get("age"), ShouldEqual, 45)
 		})
 
@@ -192,6 +192,8 @@ func TestSpec(t *testing.T) {
 						config.Set("age", 30)
 						So(config.Get("clothing.jacket"), ShouldEqual, "peacoat")
 						So(config.Get("age"), ShouldEqual, 30)
+
+						So(config.GetStringMap("clothing")["jacket"], ShouldEqual, "peacoat")
 					})
 				})
 			})

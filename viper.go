@@ -35,10 +35,6 @@ import (
 	"github.com/jacobstr/viper/maps"
 )
 
-func init() {
-	jww.SetStdoutThreshold(jww.LevelCritical)
-}
-
 // extensions Supported
 var SupportedExts []string = []string{"json", "toml", "yaml", "yml"}
 var SupportedRemoteProviders []string = []string{"etcd", "consul"}
@@ -47,8 +43,6 @@ var configType string
 
 // Manages key/value access and aliasing across multiple configuration sources.
 type ConfigManager struct {
-	overrides  *ConfigSource
-	defaults   *ConfigSource
 	attributes *ConfigSource
 
 	// These ought to just be Configgers, but they're somewhat specialized.
@@ -58,11 +52,10 @@ type ConfigManager struct {
 
 func NewConfiguration() *ConfigManager {
 	manager := &ConfigManager{}
-	manager.overrides = NewConfigSource()
-	manager.defaults = NewConfigSource()
 	manager.pflags = NewPFlagSource()
 	manager.attributes = NewConfigSource()
 	manager.env = NewEnvSource()
+
 	return manager
 }
 
@@ -77,12 +70,6 @@ func (self *ConfigManager) Find(key string) interface{} {
 		return val
 	}
 
-	val, exists = self.overrides.Get(key)
-	if exists {
-		jww.TRACE.Println(key, "Found in override:", val)
-		return val
-	}
-
 	// Periods are not supported. Allow the usage of double underscores to specify
 	// nested configuration options.
 	val, exists = self.env.Get(key)
@@ -94,12 +81,6 @@ func (self *ConfigManager) Find(key string) interface{} {
 	val, exists = self.attributes.Get(key)
 	if exists {
 		jww.TRACE.Println(key, "Found in config:", val)
-		return val
-	}
-
-	val, exists = self.defaults.Get(key)
-	if exists {
-		jww.TRACE.Println(key, "Found in defaults:", val)
 		return val
 	}
 
@@ -219,14 +200,16 @@ func (manager *ConfigManager) InConfig(key string) bool {
 // Set the default value for this key.
 // Default only used when no value is provided by the user via flag, config or ENV.
 func (manager *ConfigManager) SetDefault(key string, value interface{}) {
-	manager.defaults.Set(key, value)
+	if (!manager.IsSet(key)) {
+		manager.attributes.Set(key, value)
+	}
 }
 
 // The user provided value (via flag)
 // Will be used instead of values obtained via
 // config file, ENV, default, or key/value store
 func (manager *ConfigManager) Set(key string, value interface{}) {
-	manager.overrides.Set(key, value)
+	manager.attributes.Set(key, value)
 }
 
 // Loads and sequentially + recursively merges the provided config arguments. Returns
@@ -288,14 +271,6 @@ func (manager *ConfigManager) AllKeys() []string {
 		m[key] = struct{}{}
 	}
 
-	for key, _ := range manager.defaults.AllKeys() {
-		m[key] = struct{}{}
-	}
-
-	for key, _ := range manager.overrides.AllKeys() {
-		m[key] = struct{}{}
-	}
-
 	a := []string{}
 	for x, _ := range m {
 		// LowerCase the key for backwards-compatibility.
@@ -319,8 +294,4 @@ func (manager *ConfigManager) Debug() {
 	pretty.Println(manager.attributes)
 	fmt.Println("Env:")
 	pretty.Println(manager.env)
-	fmt.Println("Defaults:")
-	pretty.Println(manager.defaults)
-	fmt.Println("Override:")
-	pretty.Println(manager.overrides)
 }

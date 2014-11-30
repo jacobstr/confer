@@ -49,13 +49,12 @@ func (self *EnvSource) Bind(input ...string) (err error) {
 
 // Sets an environment variable.
 func (self *EnvSource) Set(key string) {
-	// TODO what does this do?
+	// NoOP
 }
 
 // Gets an environment variable.
 func (self *EnvSource) Get(key string) (val interface{}, exists bool) {
 	envkey, exists := self.index[key]
-	jww.TRACE.Println("index is", self.index)
 
 	if exists {
 		jww.TRACE.Println(key, "registered as env var", envkey)
