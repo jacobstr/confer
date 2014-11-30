@@ -9,7 +9,7 @@ import(
 	"encoding/json"
 	"gopkg.in/yaml.v1"
 	"github.com/BurntSushi/toml"
-	"github.com/jacobstr/viper/errors"
+	"github.com/jacobstr/confer/errors"
 	jww "github.com/spf13/jwalterweatherman"
 )
 

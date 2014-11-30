@@ -1,11 +1,21 @@
-viper
-=====
+Confer
+======
 
-Go configuration with fangs
+A [viper](http://gihub.com/spf13/viper) derived configuration management package. It started out as a fork but I started doing things in a dramatically different manner that it would be unmergable.
 
-## What is Viper?
+Significant changes include:
 
-A configuration management module that handles:
+ * Materialized path access of configuration variables.
+ * The singleton has been replaced by separate instances, largely for tesability.
+ * The ability to load and merge multiple configuration files. Inspired in part by
+   rails, each subsequent file has it's configuration data recursively merged into
+   the existing configuration:
+   
+   * config/application.yml
+   * config/environments/production.yml
+
+Features
+========
 
 1. Merging multiple configuration sources.
 
@@ -17,45 +27,29 @@ A configuration management module that handles:
 
 3. Binding of environment variables to configuration data.
 
-  `APP_DATABASE_PORT=3456 go run app.go`
+	`APP_DATABASE_PORT=3456 go run app.go`
 
-## Why Viper?
-
-When building a modern application you don’t want to have to worry about
-configuration file formats, you want to focus on building awesome software.
-Viper is here to help with that.
-
-Viper does the following for you:
-
-1. Find, load and marshall a configuration file in YAML, TOML or JSON.
-2. Provide a mechanism to setDefault values for your different configuration options
-3. Provide a mechanism to setOverride values for options specified through command line flags.
-4. Make it easy to tell the difference between when a user has provided a command line or config file which is the same as the default.
-
-Viper believes that:
-
-1. command line flags take precedence over options set in config files
-2. config files take precedence over options set in remote key/value stores
-3. remote key/value stores take precedence over defaults
-
-Viper configuration keys are case insensitive.
 
 ## Usage
 
 ### Initialization
 
-    app = viper.NewConfiguration()
+    app = confer.NewConfiguration()
     app.ReadPaths("application.yaml")
 
 ### Setting Defaults
+Sets a value if it hasn't already been set. Multiple invocations won't clobber
+existing defaults.
 
-    app = viper.NewConfiguration()
+    app = confer.NewConfiguration()
     app.ReadPaths("application.yaml")
     app.SetDefault("ContentDir", "content")
     app.SetDefault("LayoutDir", "layouts")
     app.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
 
-### Setting Overrides
+### Setting Arbitary Values
+Sets a value whether or not it's been set. Will clobber the current configuration key
+value.
 
     app.Set("verbose", true)
     app.Set("logfile", "/var/log/app.log")
@@ -78,22 +72,3 @@ Viper configuration keys are case insensitive.
 	// materialized path periods with underscores.
 	LOGGER_STDOUT_BASE_PATH=/var/log/myapp go run server.go
 
-## Q & A
-
-Q: Why not INI files?
-
-A: Ini files are pretty awful. There’s no standard format and they are hard to
-validate. Viper is designed to work with YAML, TOML or JSON files. If someone
-really wants to add this feature, I’d be happy to merge it. It’s easy to
-specify which formats your application will permit.
-
-Q: Why is it called "viper"?
-
-A: Viper is designed to be a companion to
-[Cobra](http://github.com/spf13/cobra). While both can operate completely
-independently, together they make a powerful pair to handle much of your
-application foundation needs.
-
-Q: Why is it called "Cobra"?
-
-A: Is there a better name for a commander?

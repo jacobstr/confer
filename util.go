@@ -1,4 +1,4 @@
-package viper
+package confer
 
 import(
 	"fmt"

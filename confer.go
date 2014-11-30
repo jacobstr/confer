@@ -1,4 +1,5 @@
 // Copyright © 2014 Steve Francia <spf@spf13.com>.
+// Copyright © 2014 Jacob Straszysnki <jacobstr@gmail.com>.
 //
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
@@ -15,7 +16,7 @@
 // config
 // default
 
-package viper
+package confer
 
 import (
 	"fmt"
@@ -27,11 +28,11 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/pflag"
 
-	. "github.com/jacobstr/viper/source"
-	"github.com/jacobstr/viper/reader"
+	. "github.com/jacobstr/confer/source"
+	"github.com/jacobstr/confer/reader"
 
-	errors "github.com/jacobstr/viper/errors"
-	"github.com/jacobstr/viper/maps"
+	errors "github.com/jacobstr/confer/errors"
+	"github.com/jacobstr/confer/maps"
 )
 
 // extensions Supported
@@ -121,7 +122,7 @@ func (manager *ConfigManager) GetStringMapString(key string) map[string]string {
 // Bind a specific key to a flag (as used by cobra)
 //
 //	 serverCmd.Flags().Int("port", 1138, "Port to run Application server on")
-//	 viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
+//	 confer.BindPFlag("port", serverCmd.Flags().Lookup("port"))
 //
 func (manager *ConfigManager) BindPFlag(key string, flag *pflag.Flag) (err error) {
 	if flag == nil {
@@ -141,7 +142,7 @@ func (manager *ConfigManager) BindPFlag(key string, flag *pflag.Flag) (err error
 	return nil
 }
 
-// Binds a viper key to a ENV variable
+// Binds a confer key to a ENV variable
 // ENV variables are case sensitive
 // If only a key is provided, it will use the env key matching the key, uppercased.
 func (manager *ConfigManager) BindEnv(input ...string) (err error) {
@@ -182,7 +183,7 @@ func (manager *ConfigManager) IsSet(key string) bool {
 	return t != nil
 }
 
-// Have viper check ENV variables for all
+// Have confer check ENV variables for all
 // keys set in config, default & flags
 func (manager *ConfigManager) AutomaticEnv() {
 	for _, x := range manager.AllKeys() {

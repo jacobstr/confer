@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package viper
+package confer
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/spf13/pflag"
-	"github.com/jacobstr/viper/reader"
+	"github.com/jacobstr/confer/reader"
 )
 
 var yamlExample = []byte(`Hacker: true
