@@ -1,22 +1,23 @@
 package maps
 
-import(
+import (
 	"reflect"
+
 	"github.com/spf13/cast"
 )
 
 // A callback for Traverse. It will accept a key, a value, the current depth
 // and return true if we should continue deeper.
-type Traverser func (key string, val interface{}, depth int) bool
+type Traverser func(key string, val interface{}, depth int) bool
 
 // General purpose method for traversing a string map.
-func Traverse (data map[string]interface{}, cb Traverser) {
+func Traverse(data map[string]interface{}, cb Traverser) {
 	traverse(data, "", 0, cb)
 }
 
 // Generic functional, recursive stringmap traversal.
 // Provides the callback with the current value, materialized path, and depth.
-func traverse (data map[string]interface{}, path string, depth int, cb Traverser) {
+func traverse(data map[string]interface{}, path string, depth int, cb Traverser) {
 	for key, val := range data {
 		var joined_key string
 		if len(path) > 0 {
@@ -34,7 +35,7 @@ func traverse (data map[string]interface{}, path string, depth int, cb Traverser
 }
 
 // Recursively collects all keys into a flattened map of materialized paths.
-func CollectKeys (data map[string]interface{}, path string, max_depth int) map[string]struct{} {
+func CollectKeys(data map[string]interface{}, path string, max_depth int) map[string]struct{} {
 	m := map[string]struct{}{}
 	Traverse(data, func(key string, val interface{}, depth int) bool {
 		m[key] = struct{}{}
@@ -80,7 +81,7 @@ func mapify(i interface{}) (map[string]interface{}, bool) {
 	}
 }
 
-// Recursively coerces all maps to stringmap. Because that's how we want it.
+// Recursively coerces all maps to a stringmap. Because that's how we want it.
 func ToStringMapRecursive(src map[string]interface{}) {
 	for key, val := range src {
 		coerced, err := cast.ToStringMapE(val)

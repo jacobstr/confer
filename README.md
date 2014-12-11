@@ -41,7 +41,7 @@ Features
 
 ### Setting Defaults
 Sets a value if it hasn't already been set. Multiple invocations won't clobber
-existing defaults.
+existing values.
 
     app = confer.NewConfiguration()
     app.ReadPaths("application.yaml")
@@ -49,9 +49,9 @@ existing defaults.
     app.SetDefault("LayoutDir", "layouts")
     app.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
 
-### Setting Arbitary Values
-Sets a value whether or not it's been set. Will clobber the current configuration key
-value.
+### Setting Values
+Sets a value whether or not it's been set. Will clobber the current value at the
+key provided.
 
     app.Set("verbose", true)
     app.Set("logfile", "/var/log/app.log")
@@ -64,11 +64,11 @@ value.
     }
 
 ### Deep Configuration Data
+Confer interprets it's keys as period-delimited materialized paths, allowing
+easy access to deep configuration data.
 
 	// Materialized paths allow for deep traversal of nested config data.
 	logger_config := app.GetStringMap("logger.stdout")
-	// Or, go even deeper.
-	logger_base_path := app.GetString("logger.stdout.base_path")
 
 	// Periods are not valid environment variable names, replace
 	// materialized path periods with underscores.

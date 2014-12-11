@@ -1,6 +1,6 @@
 package err
 
-import(
+import (
 	"fmt"
 	"strings"
 )
@@ -26,4 +26,3 @@ func (m *LoadError) Error() string {
 	}
 	return m.Msg + " " + strings.Join(merged, ", ")
 }
-

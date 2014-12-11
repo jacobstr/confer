@@ -18,7 +18,7 @@ func NewPFlagSource() *PFlagSource {
 }
 
 func (self *PFlagSource) Get(key string) (interface{}, bool) {
-	val, exists := self.data[strings.ToLower(key)];
+	val, exists := self.data[strings.ToLower(key)]
 	if exists == false {
 		return nil, false
 	}
@@ -32,11 +32,4 @@ func (self *PFlagSource) Get(key string) (interface{}, bool) {
 
 func (self *PFlagSource) Set(key string, val interface{}) {
 	self.data[key] = val.(*pflag.Flag)
-}
-
-func (self *PFlagSource) AllKeys() map[string]struct{} {
-	m := map[string]struct{}{}
-	// TODO fix this.
-	return m
-	// return traverse(self.data, "", &m)
 }

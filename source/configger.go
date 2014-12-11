@@ -7,10 +7,6 @@ type Configger interface {
 	Get(key string) (val interface{}, exists bool)
 	// Set a value.
 	Set(key string, val interface{})
-	// Return all of my keys.
-	AllKeys() map[string]struct{}
-	// Reindex the data stucture.
-	UpdateIndices()
 	// Set data from a map[string]interface{}.
 	FromStringMap(data map[string]interface{})
 	// Merge a map[string]interface{} into existing data.

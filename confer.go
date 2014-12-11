@@ -4,17 +4,16 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Viper is a application configuration system.
+// Confer is a application configuration system.
 // It believes that applications can be configured a variety of ways
 // via flags, ENVIRONMENT variables, configuration files retrieved
-// from the file system, or a remote key/value store.
-
-// Each item takes precedence over the item below it:
-
-// flag
-// env
-// config
-// default
+// from the file system.
+//
+// There are 3 precedence tiers:
+//
+// 1. Command line flags.
+// 2. Environment variables.
+// 3. Attributes - (e.g. Set, SetDefault, ReadPaths)
 
 package confer
 
@@ -37,19 +36,11 @@ import (
 	"github.com/jacobstr/confer/maps"
 )
 
-// extensions Supported
-var SupportedExts []string = []string{"json", "toml", "yaml", "yml"}
-var SupportedRemoteProviders []string = []string{"etcd", "consul"}
-var configFile string
-var configType string
-
 // Manages key/value access and aliasing across multiple configuration sources.
 type ConfigManager struct {
+	pflags     *PFlagSource
+	env        *EnvSource
 	attributes *ConfigSource
-
-	// These ought to just be Configgers, but they're somewhat specialized.
-	pflags *PFlagSource
-	env    *EnvSource
 
 	// The root path for configuration files.
 	rootPath string
@@ -65,6 +56,11 @@ func NewConfiguration() *ConfigManager {
 	return manager
 }
 
+// Finds a value at a provided key, returning nil if the key does not exist.
+// The order of precedence for configuration data is:
+// 1. Program arguments.
+// 2. Environment variables.
+// 3. Configuration file data, overrides, and defaults.
 func (self *ConfigManager) Find(key string) interface{} {
 	var val interface{}
 	var exists bool
@@ -76,14 +72,15 @@ func (self *ConfigManager) Find(key string) interface{} {
 		return val
 	}
 
-	// Periods are not supported. Allow the usage of double underscores to specify
-	// nested configuration options.
+	// Periods are not supported. Allow the usage of underscores to specify nested
+	// configuration options.
 	val, exists = self.env.Get(key)
 	if exists {
 		jww.TRACE.Println(key, "Found in environment with value:", val)
 		return val
 	}
 
+	// Attributes entail pretty much everything else.
 	val, exists = self.attributes.Get(key)
 	if exists {
 		jww.TRACE.Println(key, "Found in config:", val)
@@ -125,11 +122,9 @@ func (manager *ConfigManager) GetStringMapString(key string) map[string]string {
 	return cast.ToStringMapString(manager.Get(key))
 }
 
-// Bind a specific key to a flag (as used by cobra)
-//
-//	 serverCmd.Flags().Int("port", 1138, "Port to run Application server on")
-//	 confer.BindPFlag("port", serverCmd.Flags().Lookup("port"))
-//
+// Binds a configuration key to a command line flag:
+//	 pflag.Int("port", 8080, "The best alternative port")
+//	 confer.BindPFlag("port", pflag.Lookup("port"))
 func (manager *ConfigManager) BindPFlag(key string, flag *pflag.Flag) (err error) {
 	if flag == nil {
 		return fmt.Errorf("flag for %q is nil", key)
@@ -184,6 +179,7 @@ func (manager *ConfigManager) Get(key string) interface{} {
 	return v
 }
 
+// Returns true if the config key exists and is non-nil.
 func (manager *ConfigManager) IsSet(key string) bool {
 	t := manager.Get(key)
 	return t != nil
@@ -197,8 +193,8 @@ func (manager *ConfigManager) AutomaticEnv() {
 	}
 }
 
+// Returns true if the key provided exists in our configuration.
 func (manager *ConfigManager) InConfig(key string) bool {
-	// if the requested key is an alias, then return the proper key
 	_, exists := manager.attributes.Get(key)
 	return exists
 }
@@ -211,14 +207,14 @@ func (manager *ConfigManager) SetDefault(key string, value interface{}) {
 	}
 }
 
-// Explicitly sets a value. This is order dependent, e.g. it will override the current
-// value but may be overriden itself e.g. if one subsequently reads a YAML file. Therefore,
-// precedence is simply established by order in which you execute your configuration
-// instructions.
+// Explicitly sets a value. Will not override command line arguments or
+// environment variables, as those sources have higher precedence.
 func (manager *ConfigManager) Set(key string, value interface{}) {
 	manager.attributes.Set(key, value)
 }
 
+// Sets an optional root path. This frees you from having to specify a
+// redundant prefix when calling ReadPaths() later.
 func (manager *ConfigManager) SetRootPath(path string) {
 	manager.rootPath = path
 }
@@ -309,8 +305,10 @@ func (manager *ConfigManager) AllSettings() map[string]interface{} {
 }
 
 func (manager *ConfigManager) Debug() {
-	fmt.Println("Config file attributes:")
-	pretty.Println(manager.attributes)
+	fmt.Println("Flags:")
+	pretty.Println(manager.pflags)
 	fmt.Println("Env:")
 	pretty.Println(manager.env)
+	fmt.Println("Config file attributes:")
+	pretty.Println(manager.attributes)
 }

@@ -8,7 +8,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 )
 
-// A configuration data source that manages environment variable access.
+// A configuration data source that that reads environment variables.
 type EnvSource struct {
 	index map[string]string
 }
@@ -46,11 +46,6 @@ func (self *EnvSource) Bind(input ...string) (err error) {
 	self.index[strings.ToLower(key)] = envkey
 
 	return nil
-}
-
-// Sets an environment variable.
-func (self *EnvSource) Set(key string) {
-	// NoOP
 }
 
 // Gets an environment variable.

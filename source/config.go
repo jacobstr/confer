@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/spf13/cast"
 	"github.com/jacobstr/confer/maps"
+	"github.com/spf13/cast"
 
 	jww "github.com/spf13/jwalterweatherman"
 )
@@ -25,7 +25,7 @@ type ConfigSource struct {
 // Create a new case-insensitive, aliasable config map.
 func NewConfigSource() *ConfigSource {
 	return &ConfigSource{
-		data: make(map[string]interface{}),
+		data:  make(map[string]interface{}),
 		index: make(map[string]string),
 	}
 }
@@ -38,14 +38,14 @@ func (self *ConfigSource) Get(key string) (val interface{}, exists bool) {
 	// unless our index falls out of sync.
 	if index_exists == false {
 		return nil, false
-	// Try to access the materialized literally under the index key.
+		// Try to access the materialized literally under the index key.
 	} else if flat_val, flat_exists := self.data[index_key]; flat_exists == true {
 		return flat_val, flat_exists
-	// Begin splitting the key apart.
+		// Begin splitting the key apart.
 	} else {
 		path := strings.Split(index_key, ".")
 		current := self.data
-		for _, part := range(path[:len(path)-1]) {
+		for _, part := range path[:len(path)-1] {
 			if reflect.TypeOf(current).Kind() != reflect.Map {
 				jww.TRACE.Println("Attempting deep access of a non-map.")
 				return nil, false
@@ -67,13 +67,13 @@ func (self *ConfigSource) Get(key string) (val interface{}, exists bool) {
 // Set a key in a case insensitive manner.
 func (self *ConfigSource) Set(key string, val interface{}) {
 	index_key, index_exists := self.index[strings.ToLower(key)]
-	if (index_exists == false) {
+	if index_exists == false {
 		index_key = key
 	}
 
 	path := strings.Split(index_key, ".")
 	current := self.data
-	for _, part := range(path[:len(path)-1]) {
+	for _, part := range path[:len(path)-1] {
 		if reflect.TypeOf(current).Kind() != reflect.Map {
 			panic("Attempting deep access of a non-map.")
 		} else {

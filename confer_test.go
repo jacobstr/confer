@@ -6,6 +6,7 @@
 package confer
 
 import (
+	"sort"
 	"fmt"
 	"os"
 	"testing"
@@ -195,6 +196,25 @@ func TestSpec(t *testing.T) {
 
 						So(config.GetStringMap("clothing")["jacket"], ShouldEqual, "peacoat")
 					})
+
+					Convey("Should appear in AllKeys()", func() {
+						keys := config.AllKeys()
+						sort.Strings(keys)
+						So(
+							keys,
+							ShouldResemble,
+							[]string{
+								"age",
+								"beard",
+								"clothing",
+								"clothing.jacket",
+								"clothing.trousers",
+								"eyes",
+								"hacker",
+								"hobbies",
+								"name",
+							})
+					});
 				})
 			})
 		})
@@ -209,20 +229,28 @@ func TestSpec(t *testing.T) {
 				Changed: false,
 			}
 
+			Convey("Should not appear in AllKeys() initially", func() {
+				So(config.AllKeys(), ShouldResemble, []string{})
+			});
+
 			// Initial assertions after binding.
-			config.BindPFlag("testvalue", flag)
-			So(config.Get("testvalue"), ShouldEqual, "testing")
+			config.BindPFlag("testflag", flag)
+			So(config.Get("testflag"), ShouldEqual, "testing")
+
+			Convey("Should appear in AllKeys()", func() {
+				So(config.AllKeys(), ShouldResemble, []string{"testflag"})
+			});
 
 			Convey("Insensitivity before mutation", func() {
-				So(config.Get("testValue"), ShouldEqual, "testing")
+				So(config.Get("testFlag"), ShouldEqual, "testing")
 			})
 
 			flag.Value.Set("testing_mutate")
 			flag.Changed = true //hack for pflag usage
-			So(config.Get("testvalue"), ShouldEqual, "testing_mutate")
+			So(config.Get("testflag"), ShouldEqual, "testing_mutate")
 
 			Convey("Insensitivity after mutation", func() {
-				So(config.Get("testValue"), ShouldEqual, "testing_mutate")
+				So(config.Get("testFlag"), ShouldEqual, "testing_mutate")
 			})
 		})
 	})
