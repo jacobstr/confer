@@ -79,6 +79,8 @@ func (self *ConfigSource) Set(key string, val interface{}) {
 		} else {
 			var next interface{}
 			next, exists := current[part]
+
+			// Stub out ancestors if we set a deep child.
 			if exists == false {
 				current[part] = make(map[string]interface{})
 				current = current[part].(map[string]interface{})
@@ -95,7 +97,7 @@ func (self *ConfigSource) Set(key string, val interface{}) {
 	self.UpdateIndices()
 }
 
-// Migrates data from map to a Configger instance.
+// Replaces our configuration data with the provided stringmap, without merging.
 func (self *ConfigSource) FromStringMap(data map[string]interface{}) {
 	self.data = data
 	self.UpdateIndices()

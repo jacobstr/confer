@@ -197,7 +197,7 @@ func TestSpec(t *testing.T) {
 						So(config.GetStringMap("clothing")["jacket"], ShouldEqual, "peacoat")
 					})
 
-					Convey("Should appear in AllKeys()", func() {
+					Convey("All three sources should appear in AllKeys()", func() {
 						keys := config.AllKeys()
 						sort.Strings(keys)
 						So(
@@ -289,18 +289,38 @@ func TestSpec(t *testing.T) {
 	})
 
 	Convey("Environment Variables", t, func() {
-		config := NewConfiguration()
-		config.ReadPaths("test/fixtures/application.yaml")
 		Convey("Automatic Env", func() {
+			config := NewConfiguration()
+			config.ReadPaths("test/fixtures/application.yaml")
 			os.Setenv("APP_LOGGING_LEVEL", "trace")
 			config.AutomaticEnv()
 			So(config.Get("app.logging.level"), ShouldEqual, "trace")
+		})
+
+		Convey("Underscore translation", func() {
+			config := NewConfiguration()
+			config.ReadPaths("test/fixtures/env_underscores.yaml")
+			os.Setenv("AWESOME_SAUCE_HEAT_LEVEL_IS_RADICAL", "yep!")
+			config.AutomaticEnv()
+			So(config.Get("awesome_sauce.heat_level.is_radical"), ShouldEqual, "yep!")
 		})
 	})
 
 	Convey("Case Sensitivity", t, func() {
 		config := NewConfiguration()
 		config.ReadPaths("test/fixtures/application.yaml")
-		So(config.GetString("aPp.DatAbase.host"), ShouldResemble, "localhost")
+		funky := "aPp.DatAbase.host"
+		regular := "app.database.host"
+		So(config.GetString(funky), ShouldResemble, "localhost")
+
+		Convey("Should manage case-insensitive key collissions", func() {
+			config.Set(funky, "woot")
+			So(config.GetString(funky), ShouldEqual, "woot")
+			So(config.GetString(regular), ShouldEqual, "woot")
+
+			config.Set(regular, "localhost")
+			So(config.GetString(funky), ShouldEqual, "localhost")
+			So(config.GetString(regular), ShouldEqual, "localhost")
+		});
 	})
 }

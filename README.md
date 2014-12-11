@@ -11,10 +11,7 @@ Significant changes include:
  * The singleton has been replaced by separate instances, largely for tesability.
  * The ability to load and merge multiple configuration files. Inspired in part by
    rails, each subsequent file has it's configuration data recursively merged into
-   the existing configuration:
-   
-   * config/application.yml
-   * config/environments/production.yml
+   the existing configuration
 
 Features
 ========
@@ -31,46 +28,96 @@ Features
 
 	`APP_DATABASE_PORT=3456 go run app.go`
 
+4. Three precedence tiers:
+        1. CLI Flags
+        2. Environment vars.
+        3. Set / SetDefault / Files.
+
 
 ## Usage
 
 ### Initialization
+Create your configuration instance:
 
-    app = confer.NewConfiguration()
-    app.ReadPaths("application.yaml")
+    config := confer.NewConfiguration()
+
+Then set defaults, read paths, set overrides:
+
+    config.SetDefault("environment", "development")
+    config.ReadPaths("application.yaml", "environments/production.yml")
+    config.Set("environment", "development")
+
 
 ### Setting Defaults
 Sets a value if it hasn't already been set. Multiple invocations won't clobber
-existing values.
+existing values, so you'll likely want to do this before reading from files.
 
-    app = confer.NewConfiguration()
-    app.ReadPaths("application.yaml")
-    app.SetDefault("ContentDir", "content")
-    app.SetDefault("LayoutDir", "layouts")
-    app.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
+    config := confer.NewConfiguration()
+    config.ReadPaths("application.yaml")
+    config.SetDefault("ContentDir", "content")
+    config.SetDefault("LayoutDir", "layouts")
+    config.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
 
-### Setting Values
-Sets a value whether or not it's been set. Will clobber the current value at the
-key provided.
+### Setting Keys \ Value Pairs
+Sets a value. Has lower precedence than environment variables or command line flags.
 
-    app.Set("verbose", true)
-    app.Set("logfile", "/var/log/app.log")
+    config.Set("verbose", true)
+    config.Set("logfile", "/var/log/config.log")
 
 ### Getting Values
+There are a variety of accessors for accessing type-coerced values:
 
-    app.GetString("logFiLe") // case insensitive Setting & Getting
-    if app.GetBool("verbose") {
-      fmt.Println("verbose enabled")
-    }
+    Get(key string) : interface{}
+    GetBool(key string) : bool
+    GetFloat64(key string) : float64
+    GetInt(key string) : int
+    GetString(key string) : string
+    GetStringMap(key string) : map[string]interface{}
+    GetStringMapString(key string) : map[string]string
+    GetStringSlice(key string) : []string
+    GetTime(key string) : time.Time
+    IsSet(key string) : bool
+
 
 ### Deep Configuration Data
-Confer interprets it's keys as period-delimited materialized paths, allowing
-easy access to deep configuration data.
+*Materialized paths* allow easy access of deeply nested config data:
 
-	// Materialized paths allow for deep traversal of nested config data.
-	logger_config := app.GetStringMap("logger.stdout")
+	logger_config := config.GetStringMap("logger.stdout")
 
-	// Periods are not valid environment variable names, replace
-	// materialized path periods with underscores.
-	LOGGER_STDOUT_BASE_PATH=/var/log/myapp go run server.go
+Because periods aren't valid characters environment variable characters, when using automatic environment bindings (see below), substitute with underscores:
 
+	LOGGER_STDOUT=/var/log/myapp go run server.go
+
+
+### Environment Bindings
+
+
+##### Automatic Binding
+Confer can automatically bind all existing configuration keys to environment variables.
+
+Given some sort of `application.yaml`
+
+    ---
+       app:
+           log: "verbose"
+           database:
+               host: "localhost"
+
+And a this pair of calls:
+
+    config.ReadPaths("application.yaml"")
+    config.AutomaticEnv()
+
+You're final configuration will incorporate these environment variables, if set:
+
+    APP
+    APP_LOG
+    APP_DATABASE
+    APP_DATABASE_HOST
+
+Practically, you'd only only want to set the "leaf nodes" this way - `APP_DATABASE_HOST` and `APP_LOG`.
+
+##### Selective Binding
+If this automatic binding is bizarre, you can selectively bind environment variables to configuration keys using:
+
+    config.BindEnv("APP_LOG", "app.log")

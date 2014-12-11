@@ -143,9 +143,7 @@ func (manager *ConfigManager) BindPFlag(key string, flag *pflag.Flag) (err error
 	return nil
 }
 
-// Binds a confer key to a ENV variable
-// ENV variables are case sensitive
-// If only a key is provided, it will use the env key matching the key, uppercased.
+// Binds a confer key to a ENV variable. ENV variables are case sensitive If only
 func (manager *ConfigManager) BindEnv(input ...string) (err error) {
 	return manager.env.Bind(input...)
 }
