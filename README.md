@@ -3,7 +3,7 @@ Confer
 
 [![Build Status](https://travis-ci.org/jacobstr/confer.svg)](https://travis-ci.org/jacobstr/confer)
 
-A [viper](http://gihub.com/spf13/viper) derived configuration management package. It started out as a fork but I started doing things in a dramatically different manner that it would be unmergable.
+A [viper](http://gihub.com/spf13/viper) derived configuration management package. 
 
 Significant changes include:
 
@@ -17,16 +17,17 @@ Features
 ========
 
 1. Merging multiple configuration sources.
-
-   `config.ReadPaths("application.yaml", "environments/production.yaml")`
+  ```go
+    config.ReadPaths("application.yaml", "environments/production.yaml")`
+  ```
 
 2. Materialized path access of nested configuration data.
-
-   `config.GetInt('app.database.port')`
-
+  ```go
+    config.GetInt('app.database.port')
+  ```
 3. Binding of environment variables to configuration data.
-
-	`APP_DATABASE_PORT=3456 go run app.go`
+    
+    `APP_DATABASE_PORT=3456 go run app.go`
 
 4. Three precedence tiers:
         1. CLI Flags
@@ -38,56 +39,57 @@ Features
 
 ### Initialization
 Create your configuration instance:
-
-    config := confer.NewConfiguration()
+```go
+config := confer.NewConfiguration()
+```
 
 Then set defaults, read paths, set overrides:
-
-    config.SetDefault("environment", "development")
-    config.ReadPaths("application.yaml", "environments/production.yml")
-    config.Set("environment", "development")
-
+```go
+config.SetDefault("environment", "development")
+config.ReadPaths("application.yaml", "environments/production.yml")
+config.Set("environment", "development")
+```
 
 ### Setting Defaults
 Sets a value if it hasn't already been set. Multiple invocations won't clobber
 existing values, so you'll likely want to do this before reading from files.
-
-    config := confer.NewConfiguration()
-    config.ReadPaths("application.yaml")
-    config.SetDefault("ContentDir", "content")
-    config.SetDefault("LayoutDir", "layouts")
-    config.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
-
+```go
+config := confer.NewConfiguration()
+config.ReadPaths("application.yaml")
+config.SetDefault("ContentDir", "content")
+config.SetDefault("LayoutDir", "layouts")
+config.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
+```
 ### Setting Keys \ Value Pairs
 Sets a value. Has lower precedence than environment variables or command line flags.
-
-    config.Set("verbose", true)
-    config.Set("logfile", "/var/log/config.log")
-
+```go
+config.Set("verbose", true)
+config.Set("logfile", "/var/log/config.log")
+```
 ### Getting Values
 There are a variety of accessors for accessing type-coerced values:
-
-    Get(key string) : interface{}
-    GetBool(key string) : bool
-    GetFloat64(key string) : float64
-    GetInt(key string) : int
-    GetString(key string) : string
-    GetStringMap(key string) : map[string]interface{}
-    GetStringMapString(key string) : map[string]string
-    GetStringSlice(key string) : []string
-    GetTime(key string) : time.Time
-    IsSet(key string) : bool
-
+```go
+Get(key string) : interface{}
+GetBool(key string) : bool
+GetFloat64(key string) : float64
+GetInt(key string) : int
+GetString(key string) : string
+GetStringMap(key string) : map[string]interface{}
+GetStringMapString(key string) : map[string]string
+GetStringSlice(key string) : []string
+GetTime(key string) : time.Time
+IsSet(key string) : bool
+```
 
 ### Deep Configuration Data
 *Materialized paths* allow easy access of deeply nested config data:
-
-	logger_config := config.GetStringMap("logger.stdout")
-
+```go
+logger_config := config.GetStringMap("logger.stdout")
+```
 Because periods aren't valid characters environment variable characters, when using automatic environment bindings (see below), substitute with underscores:
-
-	LOGGER_STDOUT=/var/log/myapp go run server.go
-
+```
+LOGGER_STDOUT=/var/log/myapp go run server.go
+```
 
 ### Environment Bindings
 
@@ -96,28 +98,30 @@ Because periods aren't valid characters environment variable characters, when us
 Confer can automatically bind all existing configuration keys to environment variables.
 
 Given some sort of `application.yaml`
-
-    ---
-       app:
-           log: "verbose"
-           database:
-               host: "localhost"
-
+```yaml
+---
+app:
+   log: "verbose"
+   database:
+       host: "localhost"
+```
 And a this pair of calls:
-
-    config.ReadPaths("application.yaml"")
-    config.AutomaticEnv()
-
+```go
+config.ReadPaths("application.yaml")
+config.AutomaticEnv()
+```
 You're final configuration will incorporate these environment variables, if set:
-
-    APP
-    APP_LOG
-    APP_DATABASE
-    APP_DATABASE_HOST
+```
+APP
+APP_LOG
+APP_DATABASE
+APP_DATABASE_HOST
+```
 
 Practically, you'd only only want to set the "leaf nodes" this way - `APP_DATABASE_HOST` and `APP_LOG`.
 
 ##### Selective Binding
 If this automatic binding is bizarre, you can selectively bind environment variables to configuration keys using:
-
-    config.BindEnv("APP_LOG", "app.log")
+```go
+config.BindEnv("APP_LOG", "app.log")
+```
