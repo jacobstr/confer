@@ -74,9 +74,8 @@ func (self *ConfigSource) Set(key string, val interface{}) {
 	path := strings.Split(index_key, ".")
 	current := self.data
 	for _, part := range(path[:len(path)-1]) {
-		jww.TRACE.Println("not doing much")
 		if reflect.TypeOf(current).Kind() != reflect.Map {
-			panic("doing bad stuff!")
+			panic("Attempting deep access of a non-map.")
 		} else {
 			var next interface{}
 			next, exists := current[part]

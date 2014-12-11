@@ -44,7 +44,6 @@ func CollectKeys (data map[string]interface{}, path string, max_depth int) map[s
 }
 
 // Adapted from github.com/peterbourgon/mergemap
-
 var (
 	MaxDepth = 32
 )

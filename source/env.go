@@ -13,8 +13,9 @@ type EnvSource struct {
 	index map[string]string
 }
 
-// Converts a public-facing Get() key to the corresponding, default environment
-// variable key
+// Converts our materialized path format to a corresponding ENV_VAR friendly
+// format. Periods are replaced with single underscores. Note that reversing
+// this would generally be ambiguous as underscores are common in variable keys.
 func envamize(key string) string {
 	return strings.Replace(strings.ToUpper(key), ".", "_", -1)
 }
