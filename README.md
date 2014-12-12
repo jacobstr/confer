@@ -65,13 +65,8 @@ to drive a core configuration with environment specific overrides:
 ```go
 
 var App *confer.Config
-var loaded = false
 
 func init() {
-  if loaded {
-    return
-  }
-
   App = confer.NewConfig()
   appenv := os.Getenv("MYAPP_ENV");
   paths := []string{"application.yml"}
@@ -83,8 +78,6 @@ func init() {
   if err := App.ReadPaths(paths...); err != nil {
     log.Warn(err)
   }
-
-  loaded = true
 }
 ```
 
@@ -126,7 +119,7 @@ IsSet(key string) : bool
 ```go
 logger_config := config.GetStringMap("logger.stdout")
 ```
-Because periods aren't valid characters environment variable characters, when using automatic environment bindings (see below), substitute with underscores:
+Because periods aren't valid environment variable characters, when using automatic environment bindings (see below), substitute with underscores:
 ```
 LOGGER_STDOUT=/var/log/myapp go run server.go
 ```
