@@ -137,6 +137,7 @@ app:
    log: "verbose"
    database:
        host: "localhost"
+```
 
 And a this pair of calls:
 
@@ -155,11 +156,26 @@ APP_DATABASE_HOST
 ```
 
 Practically, you'd only only want to set the "leaf nodes" this way - `APP_DATABASE_HOST` and `APP_LOG`.
-Unfortunately, trying something clever like APP='{ "log": "debug" }' won't currently work - you'll
-simply clobber the `app` key with a string.
+Unfortunately, trying something clever like `APP='{ "log": "debug" }'` won't currently work - you'll
+simply clobber `app` with a string.
 
 ##### Selective Binding
 If this automatic binding is bizarre, you can selectively bind environment variables to configuration keys using:
 ```go
 config.BindEnv("APP_LOG", "app.log")
+```
+
+### Helpers
+You can `Set` a `func() interface{}` at key to generate a value dynamically:
+
+```go
+config.Set("dbstring", func() interface {} {
+  return fmt.Sprintf(
+    "user=%s dbname=%s sslmode=%s",
+    config.GetString("database.user"),
+    config.GetString("database.name"),
+    config.GetString("database.sslmode"),
+  )
+})
+assert(config.GetString("dbstring") ==  "user=doug dbname=pruden sslmode=pushups")
 ```
