@@ -77,18 +77,24 @@ func (self *ConfigSource) Set(key string, val interface{}) {
 	}
 
 	path := strings.Split(index_key, ".")
+	original_path := strings.Split(key, ".")
+
 	current := self.data
-	for _, part := range path[:len(path)-1] {
+	for depth, part := range path[:len(path)-1] {
 		if reflect.TypeOf(current).Kind() != reflect.Map {
 			panic("Attempting deep access of a non-map.")
 		} else {
 			var next interface{}
 			next, exists := current[part]
 
-			// Stub out ancestors if we set a deep child.
+			// Generate the index of our ancestors as we progress.
+			ancestor_key := strings.Join(original_path[0:depth+1], ".")
+
+			// Stub out ancestors if we're setting a deep child.
 			if exists == false {
 				current[part] = make(map[string]interface{})
 				current = current[part].(map[string]interface{})
+				self.index[strings.ToLower(ancestor_key)] = ancestor_key
 			} else {
 				current = next.(map[string]interface{})
 			}
@@ -96,10 +102,7 @@ func (self *ConfigSource) Set(key string, val interface{}) {
 	}
 
 	current[path[len(path)-1]] = val
-	// This is quite ineffecient. Hopefully no one has a huge tree of config data.
-	// Could be optimized by traversing down only the ancestors of a given path.
-	// But it's generally necessary to update all ancestors when we stub out defaults.
-	self.UpdateIndices()
+	self.updateIndex(key, current)
 }
 
 // Replaces our configuration data with the provided stringmap, without merging.
@@ -127,7 +130,11 @@ func (self *ConfigSource) updateIndex(key string, data interface{}) {
 		return
 	}
 
-	self.index[strings.ToLower(key)] = key
+	// Don't change the case of the original key if it already exists.
+	_, index_exists := self.index[strings.ToLower(key)]
+	if index_exists == false {
+		self.index[strings.ToLower(key)] = key
+	}
 
 	if reflect.TypeOf(data).Kind() != reflect.Map {
 		return
@@ -153,6 +160,6 @@ func (self *ConfigSource) UpdateIndices() {
 }
 
 // Returns all the keys for this specific configuration source.
-func (self *ConfigSource) AllKeys() map[string]struct{} {
+func (self *ConfigSource) AllKeys() []string {
 	return maps.CollectKeys(self.data, "", -1)
 }

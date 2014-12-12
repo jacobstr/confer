@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"reflect"
 
 	"github.com/kr/pretty"
 	"github.com/spf13/cast"
@@ -277,20 +278,32 @@ func (manager *Config) MergeAttributes(val interface{}) error {
 	return nil
 }
 
+// Returns all currently set keys, pruning ancestors and only
+// showing the leaves.
 func (manager *Config) AllKeys() []string {
-	m := map[string]struct{}{}
+	keys := manager.attributes.AllKeys()
+	keys = append(keys, manager.env.AllKeys()...)
+	keys = append(keys, manager.attributes.AllKeys()...)
 
-	for key, _ := range manager.attributes.AllKeys() {
-		m[key] = struct{}{}
+	leaves := map[string]struct{}{}
+	for _, key := range keys {
+
+		// Filter out leaves. This is really ineffecient.
+		val := manager.Get(key)
+		if val == nil {
+			leaves[key] = struct{}{}
+		} else if reflect.TypeOf(val).Kind() != reflect.Map {
+			leaves[key] = struct{}{}
+		}
 	}
 
-	a := []string{}
-	for x, _ := range m {
+	unique_keys := []string{}
+	for x, _ := range leaves {
 		// LowerCase the key for backwards-compatibility.
-		a = append(a, strings.ToLower(x))
+		unique_keys = append(unique_keys, strings.ToLower(x))
 	}
 
-	return a
+	return unique_keys
 }
 
 func (manager *Config) AllSettings() map[string]interface{} {

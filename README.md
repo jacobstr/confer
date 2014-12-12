@@ -24,14 +24,10 @@ Features
     config.GetInt('app.database.port')
   ```
 3. Binding of environment variables to configuration data.
-    
+
     `APP_DATABASE_PORT=3456 go run app.go`
 
-4. Three precedence tiers:
-        1. CLI Flags
-        2. Environment vars.
-        3. Set / SetDefault / Files.
-
+4. User-defined helper methods.
 
 ## Usage
 
@@ -146,21 +142,16 @@ config.ReadPaths("application.yaml")
 config.AutomaticEnv()
 ```
 
-Your final configuration will incorporate these environment variables, if set:
-
+You'll have the following environment variables exposed for configuration:
 ```
-APP
 APP_LOG
-APP_DATABASE
 APP_DATABASE_HOST
 ```
 
-Practically, you'd only only want to set the "leaf nodes" this way - `APP_DATABASE_HOST` and `APP_LOG`.
-Unfortunately, trying something clever like `APP='{ "log": "debug" }'` won't currently work - you'll
-simply clobber `app` with a string.
-
 ##### Selective Binding
-If this automatic binding is bizarre, you can selectively bind environment variables to configuration keys using:
+If this automatic binding is bizarre, you can selectively bind environment variables
+with ``BindEnv()`.
+
 ```go
 config.BindEnv("APP_LOG", "app.log")
 ```
