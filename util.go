@@ -1,12 +1,13 @@
 package confer
 
-import(
+import (
 	"fmt"
 	"os"
-	jww "github.com/spf13/jwalterweatherman"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 // Check if File / Directory Exists

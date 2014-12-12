@@ -3,15 +3,13 @@ Confer
 
 [![Build Status](https://travis-ci.org/jacobstr/confer.svg)](https://travis-ci.org/jacobstr/confer)
 
-A [viper](http://gihub.com/spf13/viper) derived configuration management package. 
+A [viper](http://gihub.com/spf13/viper) derived configuration management package.
 
 Significant changes include:
 
  * Materialized path access of configuration variables.
  * The singleton has been replaced by separate instances, largely for tesability.
- * The ability to load and merge multiple configuration files. Inspired in part by
-   rails, each subsequent file has it's configuration data recursively merged into
-   the existing configuration
+ * The ability to load and merge multiple configuration files.
 
 Features
 ========
@@ -39,8 +37,9 @@ Features
 
 ### Initialization
 Create your configuration instance:
+
 ```go
-config := confer.NewConfiguration()
+config := confer.NewConfig()
 ```
 
 Then set defaults, read paths, set overrides:
@@ -50,16 +49,57 @@ config.ReadPaths("application.yaml", "environments/production.yml")
 config.Set("environment", "development")
 ```
 
+**No worries!** Confer will [conveniently merge](https://github.com/jacobstr/confer/confer_test.go#L155)
+deeply nested structures for you. My usual configuration setup looks like this:
+
+```
+config
+  ├── application.development.yml
+  ├── application.production.yml
+  └── application.yml
+```
+
+For example, an application-specific config package like the one below can be used
+to drive a core configuration with environment specific overrides:
+
+```go
+
+var App *confer.Config
+var loaded = false
+
+func init() {
+  if loaded {
+    return
+  }
+
+  App = confer.NewConfig()
+  appenv := os.Getenv("MYAPP_ENV");
+  paths := []string{"application.yml"}
+
+  if (appenv != "") {
+    paths = append(paths, fmt.Sprintf("application.%s.yml", appenv))
+  }
+
+  if err := App.ReadPaths(paths...); err != nil {
+    log.Warn(err)
+  }
+
+  loaded = true
+}
+```
+
 ### Setting Defaults
 Sets a value if it hasn't already been set. Multiple invocations won't clobber
 existing values, so you'll likely want to do this before reading from files.
+
 ```go
-config := confer.NewConfiguration()
+config := confer.NewConfig()
 config.ReadPaths("application.yaml")
 config.SetDefault("ContentDir", "content")
 config.SetDefault("LayoutDir", "layouts")
 config.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
 ```
+
 ### Setting Keys \ Value Pairs
 Sets a value. Has lower precedence than environment variables or command line flags.
 ```go
@@ -104,13 +144,16 @@ app:
    log: "verbose"
    database:
        host: "localhost"
-```
+
 And a this pair of calls:
+
 ```go
 config.ReadPaths("application.yaml")
 config.AutomaticEnv()
 ```
-You're final configuration will incorporate these environment variables, if set:
+
+Your final configuration will incorporate these environment variables, if set:
+
 ```
 APP
 APP_LOG
@@ -119,6 +162,8 @@ APP_DATABASE_HOST
 ```
 
 Practically, you'd only only want to set the "leaf nodes" this way - `APP_DATABASE_HOST` and `APP_LOG`.
+Unfortunately, trying something clever like APP='{ "log": "debug" }' won't currently work - you'll
+simply clobber the `app` key with a string.
 
 ##### Selective Binding
 If this automatic binding is bizarre, you can selectively bind environment variables to configuration keys using:
