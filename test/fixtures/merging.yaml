@@ -1,0 +1,18 @@
+---
+# Used to exercise attribute merging when we transition
+# from a number -> stringmap and vice versa.
+mapusers:
+  bob: /home/bob
+  jim: /home/jim
+
+moreusers:
+  andy: /home/andy
+
+intusers: 5
+
+arrayusers:
+  - bob
+  - jim
+
+morearrayusers:
+  - andy

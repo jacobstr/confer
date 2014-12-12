@@ -1,12 +1,11 @@
 package reader
 
 import (
-	"io"
-	"path/filepath"
-	// "github.com/spf13/cast"
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
+	"path/filepath"
 
 	"github.com/BurntSushi/toml"
 	"github.com/jacobstr/confer/errors"
@@ -29,20 +28,6 @@ type ConfigReader struct {
 
 // Retuns the configuration data into a generic object for for us.
 func (cr *ConfigReader) Export() (interface{}, error) {
-	return cr.ExportAs(struct{}{})
-}
-
-// Provide a struct to marshall this config reader's data into.  This allows some
-// usage by those who might want to take advantage of the json decoders custom
-// tags e.g.
-//
-//	struct Database {
-//		Host string `json:"host"`
-//		Port int		`json:"port"`
-//	}
-//
-// Though we tend to convert to stringmaps anyway.
-func (cr *ConfigReader) ExportAs(template struct{}) (interface{}, error) {
 	var config interface{}
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(cr.reader)
@@ -69,7 +54,7 @@ func (cr *ConfigReader) ExportAs(template struct{}) (interface{}, error) {
 	return config, nil
 }
 
-func Readfile(path string) (interface{}, error) {
+func ReadFile(path string) (interface{}, error) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
 		jww.DEBUG.Println("Error reading config file:", err)
@@ -82,7 +67,7 @@ func Readfile(path string) (interface{}, error) {
 	return cr.Export()
 }
 
-func Readbytes(data []byte, format string) (interface{}, error) {
+func ReadBytes(data []byte, format string) (interface{}, error) {
 	cr := ConfigReader{
 		Format: format,
 		reader: bytes.NewReader(data),

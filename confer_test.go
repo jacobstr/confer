@@ -6,14 +6,15 @@
 package confer
 
 import (
-	"sort"
 	"fmt"
 	"os"
+	"sort"
 	"testing"
+
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/spf13/pflag"
 	"github.com/jacobstr/confer/reader"
+	"github.com/spf13/pflag"
 )
 
 var yamlExample = []byte(`Hacker: true
@@ -67,32 +68,31 @@ var remoteExample = []byte(`{
 "newkey":"remote"
 }`)
 
-
-var application_yaml = map[string]interface{} {
-	"logging": map[string]interface{} {
-		"level" : "info",
+var application_yaml = map[string]interface{}{
+	"logging": map[string]interface{}{
+		"level": "info",
 	},
-	"database": map[string]interface{} {
-		"host" : "localhost",
-		"user" : "postgres",
-		"password" : "spend_an_hour_tweaking_your_pg_hba_for_this",
+	"database": map[string]interface{}{
+		"host":     "localhost",
+		"user":     "postgres",
+		"password": "spend_an_hour_tweaking_your_pg_hba_for_this",
 	},
-	"server": map[string]interface{} {
-		"workers" : nil,
+	"server": map[string]interface{}{
+		"workers": nil,
 	},
 }
 
-var app_dev_yaml = map[string]interface{} {
-	"root": "/home/ubuntu/killer_project",
+var app_dev_yaml = map[string]interface{}{
+	"root":    "/home/ubuntu/killer_project",
 	"logging": "debug",
-	"database": map[string]interface{} {
-		"host" : "localhost",
-		"user" : "postgres",
-		"password" : "spend_an_hour_tweaking_your_pg_hba_for_this",
+	"database": map[string]interface{}{
+		"host":     "localhost",
+		"user":     "postgres",
+		"password": "spend_an_hour_tweaking_your_pg_hba_for_this",
 	},
-	"server": map[string]interface{} {
-		"workers" : 1,
-		"static_assets": []interface{}{ "css", "js", "img" , "fonts" },
+	"server": map[string]interface{}{
+		"workers":       1,
+		"static_assets": []interface{}{"css", "js", "img", "fonts"},
 	},
 }
 
@@ -119,7 +119,7 @@ func (s *stringValue) String() string {
 
 func TestSpec(t *testing.T) {
 	Convey("Map-Like Config Sources", t, func() {
-		config := NewConfiguration()
+		config := NewConfig()
 
 		Convey("Getting a default", func() {
 			config.SetDefault("age", 45)
@@ -128,7 +128,7 @@ func TestSpec(t *testing.T) {
 
 		Convey("Marhsalling", func() {
 			Convey("Yaml", func() {
-				yaml, _ := reader.Readbytes(yamlExample, "yaml")
+				yaml, _ := reader.ReadBytes(yamlExample, "yaml")
 				config.MergeAttributes(yaml)
 
 				Convey("Existence checks", func() {
@@ -144,7 +144,7 @@ func TestSpec(t *testing.T) {
 					So(
 						config.Get("hobbies"),
 						ShouldResemble,
-						[]interface{} {"skateboarding", "snowboarding", "go"},
+						[]interface{}{"skateboarding", "snowboarding", "go"},
 					)
 				})
 
@@ -153,21 +153,64 @@ func TestSpec(t *testing.T) {
 				})
 
 				Convey("Merging", func() {
-					yaml, _ := reader.Readbytes(yamlOverride, "yaml")
-					config.MergeAttributes(yaml)
-					So(config.Get("awesomeness"), ShouldEqual, "supreme")
-					So(config.Get("hobbies"), ShouldResemble, []interface{} { "skateboarding", "dancing" })
+					yaml, _ := reader.ReadFile("test/fixtures/merging.yaml")
+
+					Convey("An initial map", func() {
+						root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["mapusers"]}
+						config.MergeAttributes(root)
+						So(config.GetStringMap("users"), ShouldResemble, map[string]interface{}{"bob": "/home/bob", "jim": "/home/jim"})
+
+						Convey("Should be clobbered by an integer", func() {
+							root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["intusers"]}
+							config.MergeAttributes(root)
+							So(config.Get("users"), ShouldResemble, 5)
+
+							Convey("Should be clobbered back to a map", func() {
+								root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["mapusers"]}
+								config.MergeAttributes(root)
+								So(
+									config.GetStringMap("users"),
+									ShouldResemble, map[string]interface{}{"bob": "/home/bob", "jim": "/home/jim"},
+								)
+							})
+						})
+
+						Convey("Should be clobbered by an array", func() {
+							root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["arrayusers"]}
+							config.MergeAttributes(root)
+							So(config.Get("users"), ShouldResemble, []interface{}{"bob", "jim"})
+
+							Convey("And arrays should always clobber each other", func() {
+								root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["morearrayusers"]}
+								config.MergeAttributes(root)
+								So(
+									config.Get("users"),
+									ShouldResemble, []interface{}{"andy"},
+								)
+							})
+						})
+
+						Convey("Should be extended by another map", func() {
+							root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["moreusers"]}
+							config.MergeAttributes(root)
+							So(
+								config.GetStringMap("users"),
+								ShouldResemble,
+								map[string]interface{}{"bob": "/home/bob", "jim": "/home/jim", "andy": "/home/andy"},
+							)
+						})
+					})
 				})
 			})
 
 			Convey("Toml", func() {
-				toml, _ := reader.Readbytes(tomlExample, "toml")
+				toml, _ := reader.ReadBytes(tomlExample, "toml")
 				config.MergeAttributes(toml)
 				So(config.Get("owner.organization"), ShouldEqual, "MongoDB")
 			})
 
 			Convey("Json", func() {
-				json, _ := reader.Readbytes(jsonExample, "json")
+				json, _ := reader.ReadBytes(jsonExample, "json")
 				config.MergeAttributes(json)
 				So(config.Get("ppu"), ShouldEqual, 0.55)
 			})
@@ -182,7 +225,7 @@ func TestSpec(t *testing.T) {
 				So(config.Get("age"), ShouldEqual, 99)
 
 				Convey("Files should clobber defaults", func() {
-					yaml, _ := reader.Readbytes(yamlExample, "yaml")
+					yaml, _ := reader.ReadBytes(yamlExample, "yaml")
 					config.MergeAttributes(yaml)
 
 					So(config.Get("clothing.jacket"), ShouldEqual, "leather")
@@ -214,7 +257,7 @@ func TestSpec(t *testing.T) {
 								"hobbies",
 								"name",
 							})
-					});
+					})
 				})
 			})
 		})
@@ -231,7 +274,7 @@ func TestSpec(t *testing.T) {
 
 			Convey("Should not appear in AllKeys() initially", func() {
 				So(config.AllKeys(), ShouldResemble, []string{})
-			});
+			})
 
 			// Initial assertions after binding.
 			config.BindPFlag("testflag", flag)
@@ -239,7 +282,7 @@ func TestSpec(t *testing.T) {
 
 			Convey("Should appear in AllKeys()", func() {
 				So(config.AllKeys(), ShouldResemble, []string{"testflag"})
-			});
+			})
 
 			Convey("Insensitivity before mutation", func() {
 				So(config.Get("testFlag"), ShouldEqual, "testing")
@@ -255,16 +298,16 @@ func TestSpec(t *testing.T) {
 		})
 	})
 
-	Convey("ReadPaths", t, func(){
+	Convey("ReadPaths", t, func() {
 
 		Convey("Single Path", func() {
-			config := NewConfiguration()
+			config := NewConfig()
 			config.ReadPaths("test/fixtures/application.yaml")
 			So(config.GetStringMap("app"), ShouldResemble, application_yaml)
 		})
 
 		Convey("Multiple Paths", func() {
-			config := NewConfiguration()
+			config := NewConfig()
 			Convey("With A Missing File", func() {
 				config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/missing.yaml")
 				So(config.GetStringMap("app"), ShouldResemble, application_yaml)
@@ -281,7 +324,7 @@ func TestSpec(t *testing.T) {
 		})
 
 		Convey("Rooted paths", func() {
-			config := NewConfiguration()
+			config := NewConfig()
 			config.SetRootPath("test/fixtures")
 			config.ReadPaths("application.yaml")
 			So(config.GetStringMap("app"), ShouldResemble, application_yaml)
@@ -290,7 +333,7 @@ func TestSpec(t *testing.T) {
 
 	Convey("Environment Variables", t, func() {
 		Convey("Automatic Env", func() {
-			config := NewConfiguration()
+			config := NewConfig()
 			config.ReadPaths("test/fixtures/application.yaml")
 			os.Setenv("APP_LOGGING_LEVEL", "trace")
 			config.AutomaticEnv()
@@ -298,7 +341,7 @@ func TestSpec(t *testing.T) {
 		})
 
 		Convey("Underscore translation", func() {
-			config := NewConfiguration()
+			config := NewConfig()
 			config.ReadPaths("test/fixtures/env_underscores.yaml")
 			os.Setenv("AWESOME_SAUCE_HEAT_LEVEL_IS_RADICAL", "yep!")
 			config.AutomaticEnv()
@@ -307,7 +350,7 @@ func TestSpec(t *testing.T) {
 	})
 
 	Convey("Case Sensitivity", t, func() {
-		config := NewConfiguration()
+		config := NewConfig()
 		config.ReadPaths("test/fixtures/application.yaml")
 		funky := "aPp.DatAbase.host"
 		regular := "app.database.host"
@@ -321,6 +364,6 @@ func TestSpec(t *testing.T) {
 			config.Set(regular, "localhost")
 			So(config.GetString(funky), ShouldEqual, "localhost")
 			So(config.GetString(regular), ShouldEqual, "localhost")
-		});
+		})
 	})
 }

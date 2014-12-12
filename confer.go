@@ -37,7 +37,7 @@ import (
 )
 
 // Manages key/value access and aliasing across multiple configuration sources.
-type ConfigManager struct {
+type Config struct {
 	pflags     *PFlagSource
 	env        *EnvSource
 	attributes *ConfigSource
@@ -46,8 +46,8 @@ type ConfigManager struct {
 	rootPath string
 }
 
-func NewConfiguration() *ConfigManager {
-	manager := &ConfigManager{}
+func NewConfig() *Config {
+	manager := &Config{}
 	manager.pflags = NewPFlagSource()
 	manager.attributes = NewConfigSource()
 	manager.env = NewEnvSource()
@@ -60,8 +60,8 @@ func NewConfiguration() *ConfigManager {
 // The order of precedence for configuration data is:
 // 1. Program arguments.
 // 2. Environment variables.
-// 3. Configuration file data, overrides, and defaults.
-func (self *ConfigManager) Find(key string) interface{} {
+// 3. Config file data, overrides, and defaults.
+func (self *Config) Find(key string) interface{} {
 	var val interface{}
 	var exists bool
 
@@ -90,42 +90,42 @@ func (self *ConfigManager) Find(key string) interface{} {
 	return nil
 }
 
-func (manager *ConfigManager) GetString(key string) string {
+func (manager *Config) GetString(key string) string {
 	return cast.ToString(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetBool(key string) bool {
+func (manager *Config) GetBool(key string) bool {
 	return cast.ToBool(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetInt(key string) int {
+func (manager *Config) GetInt(key string) int {
 	return cast.ToInt(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetFloat64(key string) float64 {
+func (manager *Config) GetFloat64(key string) float64 {
 	return cast.ToFloat64(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetTime(key string) time.Time {
+func (manager *Config) GetTime(key string) time.Time {
 	return cast.ToTime(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetStringSlice(key string) []string {
+func (manager *Config) GetStringSlice(key string) []string {
 	return cast.ToStringSlice(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetStringMap(key string) map[string]interface{} {
+func (manager *Config) GetStringMap(key string) map[string]interface{} {
 	return cast.ToStringMap(manager.Get(key))
 }
 
-func (manager *ConfigManager) GetStringMapString(key string) map[string]string {
+func (manager *Config) GetStringMapString(key string) map[string]string {
 	return cast.ToStringMapString(manager.Get(key))
 }
 
 // Binds a configuration key to a command line flag:
 //	 pflag.Int("port", 8080, "The best alternative port")
 //	 confer.BindPFlag("port", pflag.Lookup("port"))
-func (manager *ConfigManager) BindPFlag(key string, flag *pflag.Flag) (err error) {
+func (manager *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
 	if flag == nil {
 		return fmt.Errorf("flag for %q is nil", key)
 	}
@@ -144,13 +144,13 @@ func (manager *ConfigManager) BindPFlag(key string, flag *pflag.Flag) (err error
 }
 
 // Binds a confer key to a ENV variable. ENV variables are case sensitive If only
-func (manager *ConfigManager) BindEnv(input ...string) (err error) {
+func (manager *Config) BindEnv(input ...string) (err error) {
 	return manager.env.Bind(input...)
 }
 
 // Get returns an interface..
 // Must be typecast or used by something that will typecast
-func (manager *ConfigManager) Get(key string) interface{} {
+func (manager *Config) Get(key string) interface{} {
 	jww.TRACE.Println("Looking for", key)
 
 	v := manager.Find(key)
@@ -178,28 +178,28 @@ func (manager *ConfigManager) Get(key string) interface{} {
 }
 
 // Returns true if the config key exists and is non-nil.
-func (manager *ConfigManager) IsSet(key string) bool {
+func (manager *Config) IsSet(key string) bool {
 	t := manager.Get(key)
 	return t != nil
 }
 
 // Have confer check ENV variables for all
 // keys set in config, default & flags
-func (manager *ConfigManager) AutomaticEnv() {
+func (manager *Config) AutomaticEnv() {
 	for _, x := range manager.AllKeys() {
 		manager.BindEnv(x)
 	}
 }
 
 // Returns true if the key provided exists in our configuration.
-func (manager *ConfigManager) InConfig(key string) bool {
+func (manager *Config) InConfig(key string) bool {
 	_, exists := manager.attributes.Get(key)
 	return exists
 }
 
 // Set the default value for this key.
 // Default only used when no value is provided by the user via flag, config or ENV.
-func (manager *ConfigManager) SetDefault(key string, value interface{}) {
+func (manager *Config) SetDefault(key string, value interface{}) {
 	if !manager.IsSet(key) {
 		manager.attributes.Set(key, value)
 	}
@@ -207,20 +207,20 @@ func (manager *ConfigManager) SetDefault(key string, value interface{}) {
 
 // Explicitly sets a value. Will not override command line arguments or
 // environment variables, as those sources have higher precedence.
-func (manager *ConfigManager) Set(key string, value interface{}) {
+func (manager *Config) Set(key string, value interface{}) {
 	manager.attributes.Set(key, value)
 }
 
 // Sets an optional root path. This frees you from having to specify a
 // redundant prefix when calling ReadPaths() later.
-func (manager *ConfigManager) SetRootPath(path string) {
+func (manager *Config) SetRootPath(path string) {
 	manager.rootPath = path
 }
 
 // Loads and sequentially + recursively merges the provided config arguments. Returns
 // an error if any of the files fail to load, though this may be expecte
 // in the case of search paths.
-func (manager *ConfigManager) ReadPaths(paths ...string) error {
+func (manager *Config) ReadPaths(paths ...string) error {
 	var err error
 	var loaded interface{}
 
@@ -236,7 +236,7 @@ func (manager *ConfigManager) ReadPaths(paths ...string) error {
 			final_path = path.Join(manager.rootPath, base_path)
 		}
 
-		loaded, err = reader.Readfile(final_path)
+		loaded, err = reader.ReadFile(final_path)
 
 		if err != nil {
 			errs = append(errs, err)
@@ -267,7 +267,7 @@ func (manager *ConfigManager) ReadPaths(paths ...string) error {
 }
 
 // Merges data into the our attributes configuration tier from a struct.
-func (manager *ConfigManager) MergeAttributes(val interface{}) error {
+func (manager *Config) MergeAttributes(val interface{}) error {
 	merged_config := maps.Merge(
 		manager.attributes.ToStringMap(),
 		cast.ToStringMap(val),
@@ -277,7 +277,7 @@ func (manager *ConfigManager) MergeAttributes(val interface{}) error {
 	return nil
 }
 
-func (manager *ConfigManager) AllKeys() []string {
+func (manager *Config) AllKeys() []string {
 	m := map[string]struct{}{}
 
 	for key, _ := range manager.attributes.AllKeys() {
@@ -293,7 +293,7 @@ func (manager *ConfigManager) AllKeys() []string {
 	return a
 }
 
-func (manager *ConfigManager) AllSettings() map[string]interface{} {
+func (manager *Config) AllSettings() map[string]interface{} {
 	m := map[string]interface{}{}
 	for _, x := range manager.AllKeys() {
 		m[x] = manager.Get(x)
@@ -302,7 +302,7 @@ func (manager *ConfigManager) AllSettings() map[string]interface{} {
 	return m
 }
 
-func (manager *ConfigManager) Debug() {
+func (manager *Config) Debug() {
 	fmt.Println("Flags:")
 	pretty.Println(manager.pflags)
 	fmt.Println("Env:")
