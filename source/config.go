@@ -30,7 +30,7 @@ func NewConfigSource() *ConfigSource {
 	}
 }
 
-// Get a key in a case insensitive manner.
+// Get the value at a key. Case-insensitive, but preserving.
 func (self *ConfigSource) Get(key string) (val interface{}, exists bool) {
 	index_key, index_exists := self.index[strings.ToLower(key)]
 
@@ -38,30 +38,35 @@ func (self *ConfigSource) Get(key string) (val interface{}, exists bool) {
 	// unless our index falls out of sync.
 	if index_exists == false {
 		return nil, false
-		// Try to access the materialized literally under the index key.
-	} else if flat_val, flat_exists := self.data[index_key]; flat_exists == true {
-		return flat_val, flat_exists
-		// Begin splitting the key apart.
-	} else {
-		path := strings.Split(index_key, ".")
-		current := self.data
-		for _, part := range path[:len(path)-1] {
-			if reflect.TypeOf(current).Kind() != reflect.Map {
-				jww.TRACE.Println("Attempting deep access of a non-map.")
+	}
+
+	// Begin splitting the key apart.
+	path := strings.Split(index_key, ".")
+	current := self.data
+	for _, part := range path[:len(path)-1] {
+		if reflect.TypeOf(current).Kind() != reflect.Map {
+			jww.TRACE.Println("Attempting deep access of a non-map.")
+			return nil, false
+		} else {
+			var next interface{}
+			next, exists := current[part]
+			if exists == false {
 				return nil, false
 			} else {
-				var next interface{}
-				next, exists := current[part]
-				if exists == false {
-					return nil, false
-				} else {
-					current = cast.ToStringMap(next)
-				}
+				current = cast.ToStringMap(next)
 			}
 		}
-		val, exists = current[path[len(path)-1]]
 	}
-	return val, exists
+
+	val, exists = current[path[len(path)-1]]
+
+	// Use a helper function if one is provided.
+	switch v := val.(type) {
+	case func() interface{}:
+		return v(), exists
+	default:
+		return v, exists
+	}
 }
 
 // Set a key in a case insensitive manner.

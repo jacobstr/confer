@@ -118,7 +118,7 @@ func (s *stringValue) String() string {
 }
 
 func TestSpec(t *testing.T) {
-	Convey("Map-Like Config Sources", t, func() {
+	Convey("Confer", t, func() {
 		config := NewConfig()
 
 		Convey("Getting a default", func() {
@@ -296,74 +296,134 @@ func TestSpec(t *testing.T) {
 				So(config.Get("testFlag"), ShouldEqual, "testing_mutate")
 			})
 		})
-	})
 
-	Convey("ReadPaths", t, func() {
+		Convey("ReadPaths", func() {
 
-		Convey("Single Path", func() {
-			config := NewConfig()
-			config.ReadPaths("test/fixtures/application.yaml")
-			So(config.GetStringMap("app"), ShouldResemble, application_yaml)
-		})
-
-		Convey("Multiple Paths", func() {
-			config := NewConfig()
-			Convey("With A Missing File", func() {
-				config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/missing.yaml")
+			Convey("Single Path", func() {
+				config.ReadPaths("test/fixtures/application.yaml")
 				So(config.GetStringMap("app"), ShouldResemble, application_yaml)
 			})
 
-			Convey("With An Augmented Environment", func() {
-				config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/environments/development.yaml")
-				So(config.GetStringMap("app"), ShouldResemble, app_dev_yaml)
-
-				Convey("Deep access", func() {
-					So(config.GetString("app.database.host"), ShouldEqual, "localhost")
+			Convey("Multiple Paths", func() {
+				Convey("With A Missing File", func() {
+					config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/missing.yaml")
+					So(config.GetStringMap("app"), ShouldResemble, application_yaml)
 				})
+
+				Convey("With An Augmented Environment", func() {
+					config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/environments/development.yaml")
+					So(config.GetStringMap("app"), ShouldResemble, app_dev_yaml)
+
+					Convey("Deep access", func() {
+						So(config.GetString("app.database.host"), ShouldEqual, "localhost")
+					})
+				})
+			})
+
+			Convey("Rooted paths", func() {
+				config.SetRootPath("test/fixtures")
+				config.ReadPaths("application.yaml")
+				So(config.GetStringMap("app"), ShouldResemble, application_yaml)
 			})
 		})
 
-		Convey("Rooted paths", func() {
-			config := NewConfig()
-			config.SetRootPath("test/fixtures")
-			config.ReadPaths("application.yaml")
-			So(config.GetStringMap("app"), ShouldResemble, application_yaml)
-		})
-	})
+		Convey("Environment Variables", func() {
+			Convey("Automatic Env", func() {
+				config.ReadPaths("test/fixtures/application.yaml")
+				os.Setenv("APP_LOGGING_LEVEL", "trace")
+				config.AutomaticEnv()
+				So(config.Get("app.logging.level"), ShouldEqual, "trace")
+			})
 
-	Convey("Environment Variables", t, func() {
-		Convey("Automatic Env", func() {
-			config := NewConfig()
+			Convey("Underscore translation", func() {
+				config.ReadPaths("test/fixtures/env_underscores.yaml")
+				os.Setenv("AWESOME_SAUCE_HEAT_LEVEL_IS_RADICAL", "yep!")
+				config.AutomaticEnv()
+				So(config.Get("awesome_sauce.heat_level.is_radical"), ShouldEqual, "yep!")
+			})
+		})
+
+		Convey("Case Sensitivity", func() {
 			config.ReadPaths("test/fixtures/application.yaml")
-			os.Setenv("APP_LOGGING_LEVEL", "trace")
-			config.AutomaticEnv()
-			So(config.Get("app.logging.level"), ShouldEqual, "trace")
+			funky := "aPp.DatAbase.host"
+			regular := "app.database.host"
+			So(config.GetString(funky), ShouldResemble, "localhost")
+
+			Convey("Should manage case-insensitive key collissions", func() {
+				config.Set(funky, "woot")
+				So(config.GetString(funky), ShouldEqual, "woot")
+				So(config.GetString(regular), ShouldEqual, "woot")
+
+				config.Set(regular, "localhost")
+				So(config.GetString(funky), ShouldEqual, "localhost")
+				So(config.GetString(regular), ShouldEqual, "localhost")
+			})
 		})
 
-		Convey("Underscore translation", func() {
-			config := NewConfig()
-			config.ReadPaths("test/fixtures/env_underscores.yaml")
-			os.Setenv("AWESOME_SAUCE_HEAT_LEVEL_IS_RADICAL", "yep!")
-			config.AutomaticEnv()
-			So(config.Get("awesome_sauce.heat_level.is_radical"), ShouldEqual, "yep!")
+		Convey("Helpers", func() {
+			Convey("Returning an integer", func() {
+				config.Set("port", func() interface{} {
+					return 5
+				})
+				So(config.GetInt("port"), ShouldEqual, 5)
+			})
+
+			Convey("Returning a stringmap", func() {
+				config.Set("database", func() interface{} {
+					return map[string]string{"host": "localhost"}
+				})
+				So(config.GetStringMapString("database"), ShouldResemble, map[string]string{"host": "localhost"})
+			})
+
+			Convey("Dbstring example", func() {
+				config.Set("database.user", "doug")
+				config.Set("database.dbname", "pruden")
+				config.Set("database.sslmode", "pushups")
+
+				config.Set("dbstring", func() interface{} {
+					return fmt.Sprintf(
+						"user=%s dbname=%s sslmode=%s",
+						config.GetString("database.user"),
+						config.GetString("database.dbname"),
+						config.GetString("database.sslmode"),
+					)
+				})
+				So(config.GetString("dbstring"), ShouldEqual, "user=doug dbname=pruden sslmode=pushups")
+			})
 		})
 	})
+}
 
-	Convey("Case Sensitivity", t, func() {
-		config := NewConfig()
-		config.ReadPaths("test/fixtures/application.yaml")
-		funky := "aPp.DatAbase.host"
-		regular := "app.database.host"
-		So(config.GetString(funky), ShouldResemble, "localhost")
+func BenchmarkIntAccess(b *testing.B) {
+	configAttrs := make(map[string]interface{})
 
-		Convey("Should manage case-insensitive key collissions", func() {
-			config.Set(funky, "woot")
-			So(config.GetString(funky), ShouldEqual, "woot")
-			So(config.GetString(regular), ShouldEqual, "woot")
+	for i := 0; i < b.N; i++ {
+		configAttrs[fmt.Sprintf("attr%s", i)] = i
+	}
 
-			config.Set(regular, "localhost")
-			So(config.GetString(funky), ShouldEqual, "localhost")
-			So(config.GetString(regular), ShouldEqual, "localhost")
-		})
-	})
+	config := NewConfig()
+	config.MergeAttributes(configAttrs)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		config.GetInt(fmt.Sprintf("attr%s", i))
+	}
+}
+
+func BenchmarkHelperAccess(b *testing.B) {
+	configAttrs := make(map[string]interface{})
+
+	for i := 0; i < b.N; i++ {
+		configAttrs[fmt.Sprintf("attr%s", i)] = func(c *Config) interface{} {
+			return 5
+		}
+	}
+
+	config := NewConfig()
+	config.MergeAttributes(configAttrs)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		config.GetInt(fmt.Sprintf("attr%s", i))
+	}
 }

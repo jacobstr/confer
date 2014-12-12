@@ -163,3 +163,18 @@ If this automatic binding is bizarre, you can selectively bind environment varia
 ```go
 config.BindEnv("APP_LOG", "app.log")
 ```
+
+### Helpers
+You can `Set` a `func() interface{}` at key to generate a value dynamically:
+
+```go
+config.Set("dbstring", func() interface {} {
+  return fmt.Sprintf(
+    "user=%s dbname=%s sslmode=%s",
+    config.GetString("database.user"),
+    config.GetString("database.name"),
+    config.GetString("database.sslmode"),
+  )
+})
+assert(config.GetString("dbstring") ==  "user=doug dbname=pruden sslmode=pushups")
+```
