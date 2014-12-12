@@ -65,13 +65,8 @@ to drive a core configuration with environment specific overrides:
 ```go
 
 var App *confer.Config
-var loaded = false
 
 func init() {
-  if loaded {
-    return
-  }
-
   App = confer.NewConfig()
   appenv := os.Getenv("MYAPP_ENV");
   paths := []string{"application.yml"}
@@ -83,8 +78,6 @@ func init() {
   if err := App.ReadPaths(paths...); err != nil {
     log.Warn(err)
   }
-
-  loaded = true
 }
 ```
 
