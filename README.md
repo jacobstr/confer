@@ -3,7 +3,7 @@ Confer
 
 [![Build Status](https://travis-ci.org/jacobstr/confer.svg)](https://travis-ci.org/jacobstr/confer)
 
-A [viper](http://gihub.com/spf13/viper) derived configuration management package.
+A [viper](http://github.com/spf13/viper) derived configuration management package.
 
 Significant changes include:
 
