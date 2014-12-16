@@ -48,6 +48,14 @@ func (self *EnvSource) Bind(input ...string) (err error) {
 	return nil
 }
 
+func (self *EnvSource) AllKeys() []string {
+	a := []string{}
+	for x, _ := range self.index {
+		a = append(a, strings.ToLower(x))
+	}
+	return a
+}
+
 // Gets an environment variable.
 func (self *EnvSource) Get(key string) (val interface{}, exists bool) {
 	envkey, exists := self.index[key]

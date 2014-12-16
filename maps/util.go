@@ -34,11 +34,11 @@ func traverse(data map[string]interface{}, path string, depth int, cb Traverser)
 	}
 }
 
-// Recursively collects all keys into a flattened map of materialized paths.
-func CollectKeys(data map[string]interface{}, path string, max_depth int) map[string]struct{} {
-	m := map[string]struct{}{}
+// Recursively collects all keys into a flattened slice of materialized paths.
+func CollectKeys(data map[string]interface{}, path string, max_depth int) []string {
+	m := []string{}
 	Traverse(data, func(key string, val interface{}, depth int) bool {
-		m[key] = struct{}{}
+		m = append(m, key)
 		return max_depth == -1 || depth <= max_depth
 	})
 	return m

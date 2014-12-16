@@ -249,7 +249,6 @@ func TestSpec(t *testing.T) {
 							[]string{
 								"age",
 								"beard",
-								"clothing",
 								"clothing.jacket",
 								"clothing.trousers",
 								"eyes",
@@ -391,9 +390,38 @@ func TestSpec(t *testing.T) {
 				So(config.GetString("dbstring"), ShouldEqual, "user=doug dbname=pruden sslmode=pushups")
 			})
 		})
+
+		Convey("AllSettings", func() {
+			Convey("Should only include leaves", func() {
+				config.ReadPaths("test/fixtures/application.yaml")
+				So(config.AllSettings(), ShouldResemble, map[string]interface{} {
+					"app.logging.level" : "info",
+					"app.database.host" : "localhost",
+					"app.database.user" : "postgres",
+					"app.database.password" : "spend_an_hour_tweaking_your_pg_hba_for_this",
+					"app.server.workers" : nil,
+				})
+			})
+
+			Convey("Should include stubbed deep values", func() {
+				config.Set("api.credentials.secret", "password")
+				So(config.AllSettings(), ShouldResemble, map[string]interface{} {
+					"api.credentials.secret" : "password",
+				})
+
+				Convey("And retain them when we merge data", func() {
+					config.MergeAttributes(map[string]interface{} { "api": map[string]interface {} { "user" : "stallman1337@hotmail.com"} })
+					So(config.AllSettings(), ShouldResemble, map[string]interface{} {
+						"api.credentials.secret" : "password",
+						"api.user" : "stallman1337@hotmail.com",
+					})
+				})
+			})
+		})
 	})
 }
 
+// About 9500 ns / op on my system.
 func BenchmarkIntAccess(b *testing.B) {
 	configAttrs := make(map[string]interface{})
 
@@ -410,6 +438,7 @@ func BenchmarkIntAccess(b *testing.B) {
 	}
 }
 
+// About 9500 ns / op on my system.
 func BenchmarkHelperAccess(b *testing.B) {
 	configAttrs := make(map[string]interface{})
 
