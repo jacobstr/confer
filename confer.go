@@ -20,10 +20,9 @@ package confer
 import (
 	"fmt"
 	"path"
-	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
-	"reflect"
 
 	"github.com/kr/pretty"
 	"github.com/spf13/cast"
@@ -229,13 +228,7 @@ func (manager *Config) ReadPaths(paths ...string) error {
 	errs := []error{}
 
 	for _, base_path := range paths {
-		var final_path string
-
-		if filepath.IsAbs(base_path) == false {
-			final_path = path.Join(manager.rootPath, base_path)
-		} else {
-			final_path = path.Join(manager.rootPath, base_path)
-		}
+		final_path := path.Join(manager.rootPath, base_path)
 
 		loaded, err = reader.ReadFile(final_path)
 
@@ -248,14 +241,10 @@ func (manager *Config) ReadPaths(paths ...string) error {
 		coerced := cast.ToStringMap(loaded)
 		maps.ToStringMapRecursive(coerced)
 
-		if merged_config == nil {
-			merged_config = coerced
-		} else {
-			merged_config = maps.Merge(
-				merged_config,
-				coerced,
-			)
-		}
+		merged_config = maps.Merge(
+			merged_config,
+			coerced,
+		)
 
 		manager.attributes.FromStringMap(merged_config)
 	}

@@ -155,17 +155,17 @@ func TestSpec(t *testing.T) {
 				Convey("Merging", func() {
 					yaml, _ := reader.ReadFile("test/fixtures/merging.yaml")
 
-					Convey("An initial map", func() {
+					Convey("Given an initial map", func() {
 						root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["mapusers"]}
 						config.MergeAttributes(root)
 						So(config.GetStringMap("users"), ShouldResemble, map[string]interface{}{"bob": "/home/bob", "jim": "/home/jim"})
 
-						Convey("Should be clobbered by an integer", func() {
+						Convey("When merged, it should be clobbered by an integer", func() {
 							root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["intusers"]}
 							config.MergeAttributes(root)
 							So(config.Get("users"), ShouldResemble, 5)
 
-							Convey("Should be clobbered back to a map", func() {
+							Convey("And that integer should be overwritten again by a map", func() {
 								root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["mapusers"]}
 								config.MergeAttributes(root)
 								So(
@@ -180,7 +180,7 @@ func TestSpec(t *testing.T) {
 							config.MergeAttributes(root)
 							So(config.Get("users"), ShouldResemble, []interface{}{"bob", "jim"})
 
-							Convey("And arrays should always clobber each other", func() {
+							Convey("And arrays should always overwrite each other", func() {
 								root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["morearrayusers"]}
 								config.MergeAttributes(root)
 								So(
@@ -190,7 +190,7 @@ func TestSpec(t *testing.T) {
 							})
 						})
 
-						Convey("Should be extended by another map", func() {
+						Convey("Maps should be merged together", func() {
 							root := map[string]interface{}{"users": yaml.(map[interface{}]interface{})["moreusers"]}
 							config.MergeAttributes(root)
 							So(
@@ -271,7 +271,7 @@ func TestSpec(t *testing.T) {
 				Changed: false,
 			}
 
-			Convey("Should not appear in AllKeys() initially", func() {
+			Convey("Should not appear in AllKeys() until bound", func() {
 				So(config.AllKeys(), ShouldResemble, []string{})
 			})
 
@@ -359,6 +359,15 @@ func TestSpec(t *testing.T) {
 			})
 		})
 
+		Convey("Coercion", func() {
+			config.Set("number", 5.123)
+			config.Set("time", "1970-01-01")
+			config.Set("strings", []string{5, 10})
+			So(config.GetFloat64("number"), ShouldEqual, 5.123)
+			So(config.GetInt("number"), ShouldEqual, 5)
+			So(config.GetStringSlice("strings"), ShouldResemble, []string{"5", "10"})
+		})
+
 		Convey("Helpers", func() {
 			Convey("Returning an integer", func() {
 				config.Set("port", func() interface{} {
@@ -394,26 +403,26 @@ func TestSpec(t *testing.T) {
 		Convey("AllSettings", func() {
 			Convey("Should only include leaves", func() {
 				config.ReadPaths("test/fixtures/application.yaml")
-				So(config.AllSettings(), ShouldResemble, map[string]interface{} {
-					"app.logging.level" : "info",
-					"app.database.host" : "localhost",
-					"app.database.user" : "postgres",
-					"app.database.password" : "spend_an_hour_tweaking_your_pg_hba_for_this",
-					"app.server.workers" : nil,
+				So(config.AllSettings(), ShouldResemble, map[string]interface{}{
+					"app.logging.level":     "info",
+					"app.database.host":     "localhost",
+					"app.database.user":     "postgres",
+					"app.database.password": "spend_an_hour_tweaking_your_pg_hba_for_this",
+					"app.server.workers":    nil,
 				})
 			})
 
 			Convey("Should include stubbed deep values", func() {
 				config.Set("api.credentials.secret", "password")
-				So(config.AllSettings(), ShouldResemble, map[string]interface{} {
-					"api.credentials.secret" : "password",
+				So(config.AllSettings(), ShouldResemble, map[string]interface{}{
+					"api.credentials.secret": "password",
 				})
 
 				Convey("And retain them when we merge data", func() {
-					config.MergeAttributes(map[string]interface{} { "api": map[string]interface {} { "user" : "stallman1337@hotmail.com"} })
-					So(config.AllSettings(), ShouldResemble, map[string]interface{} {
-						"api.credentials.secret" : "password",
-						"api.user" : "stallman1337@hotmail.com",
+					config.MergeAttributes(map[string]interface{}{"api": map[string]interface{}{"user": "stallman1337@hotmail.com"}})
+					So(config.AllSettings(), ShouldResemble, map[string]interface{}{
+						"api.credentials.secret": "password",
+						"api.user":               "stallman1337@hotmail.com",
 					})
 				})
 			})
