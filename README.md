@@ -157,7 +157,7 @@ config.BindEnv("APP_LOG", "app.log")
 ```
 
 ### Helpers
-You can `Set` a `func() interface{}` at key to generate a value dynamically:
+You can `Set` a `func() interface{}` at a configuration key to provide values dynamically:
 
 ```go
 config.Set("dbstring", func() interface {} {
