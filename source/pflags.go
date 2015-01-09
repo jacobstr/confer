@@ -1,8 +1,6 @@
 package source
 
 import (
-	"strings"
-
 	"github.com/spf13/pflag"
 )
 
@@ -18,7 +16,7 @@ func NewPFlagSource() *PFlagSource {
 }
 
 func (self *PFlagSource) Get(key string) (interface{}, bool) {
-	val, exists := self.data[strings.ToLower(key)]
+	val, exists := self.data[key]
 	if exists == false {
 		return nil, false
 	}
