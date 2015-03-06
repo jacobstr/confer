@@ -135,7 +135,7 @@ app:
        host: "localhost"
 ```
 
-And a this pair of calls:
+And this pair of calls:
 
 ```go
 config.ReadPaths("application.yaml")
