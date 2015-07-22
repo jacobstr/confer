@@ -10,7 +10,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/jacobstr/confer/errors"
 	jww "github.com/spf13/jwalterweatherman"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v2"
 )
 
 type ConfigFormat string
