@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/jacobstr/confer",
-	"GoVersion": "go1.3.1",
+	"GoVersion": "go1.4.2",
 	"Deps": [
 		{
 			"ImportPath": "github.com/BurntSushi/toml",
@@ -21,6 +21,11 @@
 			"Rev": "6807e777504f54ad073ecef66747de158294b639"
 		},
 		{
+			"ImportPath": "github.com/smartystreets/assertions",
+			"Comment": "1.5.0-391-g8121b35",
+			"Rev": "8121b35a306f72fab16bdbc59d7809563955ca4d"
+		},
+		{
 			"ImportPath": "github.com/smartystreets/goconvey/convey",
 			"Comment": "1.5.0-335-g9f800fa",
 			"Rev": "9f800fa7d56a5bb44514a4b3463f3f4d21346b78"
@@ -38,8 +43,8 @@
 			"Rev": "463bdc838f2b35e9307e91d480878bda5fff7232"
 		},
 		{
-			"ImportPath": "gopkg.in/yaml.v1",
-			"Rev": "9f9df34309c04878acc86042b16630b0f696e1de"
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "7ad95dd0798a40da1ccdff6dff35fd177b5edf40"
 		}
 	]
 }
