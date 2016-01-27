@@ -3,12 +3,12 @@ Confer
 
 [![Build Status](https://travis-ci.org/jacobstr/confer.svg)](https://travis-ci.org/jacobstr/confer)
 
-A [viper](http://github.com/spf13/viper) derived configuration management package.
+A [viper](http://github.com/spf13/viper)-derived configuration management package.
 
 Significant changes include:
 
  * Materialized path access of configuration variables.
- * The singleton has been replaced by separate instances, largely for tesability.
+ * The singleton has been replaced by separate instances, largely for testability.
  * The ability to load and merge multiple configuration files.
 
 Features
@@ -89,7 +89,7 @@ config.SetDefault("LayoutDir", "layouts")
 config.SetDefault("Indexes", map[string]string{"tag": "tags", "category": "categories"})
 ```
 
-### Setting Keys \ Value Pairs
+### Setting Keys / Value Pairs
 Sets a value. Has lower precedence than environment variables or command line flags.
 ```go
 config.Set("verbose", true)
