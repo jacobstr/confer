@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
-	"reflect"
 
 	"github.com/kr/pretty"
 	"github.com/spf13/cast"
@@ -231,10 +231,10 @@ func (manager *Config) ReadPaths(paths ...string) error {
 	for _, base_path := range paths {
 		var final_path string
 
-		if filepath.IsAbs(base_path) == false {
+		if !filepath.IsAbs(base_path) {
 			final_path = path.Join(manager.rootPath, base_path)
 		} else {
-			final_path = path.Join(manager.rootPath, base_path)
+			final_path = base_path
 		}
 
 		loaded, err = reader.ReadFile(final_path)

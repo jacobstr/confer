@@ -303,6 +303,13 @@ func TestSpec(t *testing.T) {
 				So(config.GetStringMap("app"), ShouldResemble, application_yaml)
 			})
 
+			Convey("Absolute Path With Root Set", func() {
+				config.SetRootPath("test/fixtures")
+				currentDir, _ := os.Getwd()
+				config.ReadPaths(currentDir + "/test/fixtures/application.yaml")
+				So(config.GetStringMap("app"), ShouldResemble, application_yaml)
+			})
+
 			Convey("Multiple Paths", func() {
 				Convey("With A Missing File", func() {
 					config.ReadPaths("test/fixtures/application.yaml", "test/fixtures/missing.yaml")
