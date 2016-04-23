@@ -108,6 +108,7 @@ GetStringMapString(key string) : map[string]string
 GetStringSlice(key string) : []string
 GetTime(key string) : time.Time
 IsSet(key string) : bool
+NewConfigSubset(prefix string) : *confer.Config
 ```
 
 ### Deep Configuration Data
@@ -118,6 +119,47 @@ logger_config := config.GetStringMap("logger.stdout")
 Because periods aren't valid environment variable characters, when using automatic environment bindings (see below), substitute with underscores:
 ```
 LOGGER_STDOUT=/var/log/myapp go run server.go
+```
+
+### Configuration Subsets
+An alternative to the `GetStringMap` / *Materialized paths* is a configuration subset. This allows you to create a new *confer.Config object which is a subset of the full configuration, specified by a key `prefix`. This makes passing around a subset of the configuration easy, allowing you to access the values using the getter methods listed above as you would normally. The setter methods are also supported on a configuration subset, as well as nested configuration subsets.
+
+##### Example Config
+```yml
+---
+my-app:
+    logging:
+        enabled: true
+        level: debug
+    server:
+        workers:
+            - 127.0.0.1
+            - 127.0.0.2
+            - 127.0.0.3
+    database:
+        bird:
+            host:     feathers
+            user:     postgres
+            password: superl33+
+        wind:
+            host:     sea-spray
+            user:     postgres
+            password: easyPZ
+```
+
+##### Config Subset
+
+```go
+windDbConfig := config.NewConfigSubset("my-app.database.wind")
+host := windDbConfig.GetString("host")
+```
+
+##### Nested Config Subset
+
+```go
+dbConfig := config.NewConfigSubset("my-app.database")
+windDbConfig := dbConfig.NewConfigSubset("wind")
+host := windDbConfig.GetString("host")
 ```
 
 ### Environment Bindings

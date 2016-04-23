@@ -366,6 +366,55 @@ func TestSpec(t *testing.T) {
 			})
 		})
 
+		Convey("Config Subset", func() {
+			config.ReadPaths("test/fixtures/application.yaml")
+			keyPrefix := "app.database"
+			configSubset := config.NewConfigSubset(keyPrefix)
+
+			Convey("Returning a config", func() {
+				So(configSubset, ShouldHaveSameTypeAs, NewConfig())
+			})
+
+			Convey("Subset gets", func() {
+				So(configSubset.GetString("host"), ShouldEqual, "localhost")
+				So(configSubset.GetString("user"), ShouldEqual, "postgres")
+				So(configSubset.InConfig("password"), ShouldEqual, true)
+			})
+
+			Convey("Subset sets", func() {
+				configSubset.SetDefault("port", 5432)
+				configSubset.Set("ssl.mode", "disable")
+				configSubset.Set("max_open_conns", 30)
+
+				So(configSubset.Get("ssl.mode"), ShouldEqual, "disable")
+				So(configSubset.Get("max_open_conns"), ShouldEqual, 30)
+				So(configSubset.IsSet("port"), ShouldEqual, true)
+				So(configSubset.Get("port"), ShouldEqual, 5432)
+
+				// Keys for config subset should be (8 in total): [
+				//	app.database app.database.host app.database.user app.database.password
+				//	app.database.port app.database.ssl app.database.ssl.mode
+				//	app.database.max_open_conns
+				// ]
+				So(len(configSubset.AllKeys()), ShouldEqual, 8)
+			})
+
+			Convey("Nested Subsets", func() {
+				configSubset.Set("ssl.mode", "verify-full")
+				configSubsetNested := configSubset.NewConfigSubset("ssl")
+				configSubsetNested.SetDefault("connect_timeout", 0)
+
+				So(configSubsetNested.IsSet("mode"), ShouldEqual, true)
+				So(configSubsetNested.GetString("mode"), ShouldEqual, "verify-full")
+				So(configSubsetNested.InConfig("connect_timeout"), ShouldEqual, true)
+
+				// Keys for nested config subset should be (3 in total): [
+				//	app.database.ssl app.database.ssl.mode app.database.ssl.connect_timeout
+				// ]
+				So(len(configSubsetNested.AllKeys()), ShouldEqual, 3)
+			})
+		})
+
 		Convey("Helpers", func() {
 			Convey("Returning an integer", func() {
 				config.Set("port", func() interface{} {
