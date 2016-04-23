@@ -45,6 +45,9 @@ type Config struct {
 
 	// The root path for configuration files.
 	rootPath string
+
+	// Key prefix for config subsets. The prefixes defines the root of the subset.
+	keyPrefix string
 }
 
 func NewConfig() *Config {
@@ -53,6 +56,7 @@ func NewConfig() *Config {
 	manager.attributes = NewConfigSource()
 	manager.env = NewEnvSource()
 	manager.rootPath = ""
+	manager.keyPrefix = ""
 
 	return manager
 }
@@ -152,6 +156,8 @@ func (manager *Config) BindEnv(input ...string) (err error) {
 // Get returns an interface..
 // Must be typecast or used by something that will typecast
 func (manager *Config) Get(key string) interface{} {
+	key = manager.GetFullKey(key)
+
 	jww.TRACE.Println("Looking for", key)
 
 	v := manager.Find(key)
@@ -178,6 +184,19 @@ func (manager *Config) Get(key string) interface{} {
 	return v
 }
 
+// NewConfigSubset returns a new config based on
+func (manager *Config) NewConfigSubset(prefix string) *Config {
+	configSubset := &Config{}
+	*configSubset = *manager
+
+	// Use GetFullKey here, as the config may already be a subset. This allows
+	// support of nested config subsets.
+	prefix = manager.GetFullKey(prefix)
+	configSubset.keyPrefix = prefix
+
+	return configSubset
+}
+
 // Returns true if the config key exists and is non-nil.
 func (manager *Config) IsSet(key string) bool {
 	t := manager.Get(key)
@@ -194,6 +213,7 @@ func (manager *Config) AutomaticEnv() {
 
 // Returns true if the key provided exists in our configuration.
 func (manager *Config) InConfig(key string) bool {
+	key = manager.GetFullKey(key)
 	_, exists := manager.attributes.Get(key)
 	return exists
 }
@@ -201,6 +221,7 @@ func (manager *Config) InConfig(key string) bool {
 // Set the default value for this key.
 // Default only used when no value is provided by the user via flag, config or ENV.
 func (manager *Config) SetDefault(key string, value interface{}) {
+	key = manager.GetFullKey(key)
 	if !manager.IsSet(key) {
 		manager.attributes.Set(key, value)
 	}
@@ -209,6 +230,7 @@ func (manager *Config) SetDefault(key string, value interface{}) {
 // Explicitly sets a value. Will not override command line arguments or
 // environment variables, as those sources have higher precedence.
 func (manager *Config) Set(key string, value interface{}) {
+	key = manager.GetFullKey(key)
 	manager.attributes.Set(key, value)
 }
 
@@ -288,6 +310,10 @@ func (manager *Config) AllKeys() []string {
 	leaves := map[string]struct{}{}
 	for _, key := range keys {
 
+		if manager.keyPrefix != "" && !strings.HasPrefix(key, manager.keyPrefix) {
+			continue
+		}
+
 		// Filter out leaves. This is really ineffecient.
 		val := manager.Get(key)
 		if val == nil {
@@ -322,4 +348,15 @@ func (manager *Config) Debug() {
 	pretty.Println(manager.env)
 	fmt.Println("Config file attributes:")
 	pretty.Println(manager.attributes)
+}
+
+// GetFullKey accounts for a key prefix (config subset) and returns the full key.
+func (manager *Config) GetFullKey(key string) string {
+	if manager.keyPrefix != "" {
+		jww.TRACE.Println(key, "Using key prefix in operation: ", manager.keyPrefix)
+
+		key = manager.keyPrefix + "." + key
+	}
+
+	return key
 }
