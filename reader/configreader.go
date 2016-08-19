@@ -35,17 +35,17 @@ func (cr *ConfigReader) Export() (interface{}, error) {
 	switch cr.Format {
 	case "yaml":
 		if err := yaml.Unmarshal(buf.Bytes(), &config); err != nil {
-			jww.ERROR.Fatalf("Error parsing config: %s", err)
+			jww.ERROR.Panicf("Error parsing config: %s", err)
 		}
 
 	case "json":
 		if err := json.Unmarshal(buf.Bytes(), &config); err != nil {
-			jww.ERROR.Fatalf("Error parsing config: %s", err)
+			jww.ERROR.Panicf("Error parsing config: %s", err)
 		}
 
 	case "toml":
 		if _, err := toml.Decode(buf.String(), &config); err != nil {
-			jww.ERROR.Fatalf("Error parsing config: %s", err)
+			jww.ERROR.Panicf("Error parsing config: %s", err)
 		}
 	default:
 		return nil, err.UnsupportedConfigError(cr.Format)
