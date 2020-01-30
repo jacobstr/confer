@@ -17,7 +17,9 @@ type EnvSource struct {
 // format. Periods are replaced with single underscores. Note that reversing
 // this would generally be ambiguous as underscores are common in variable keys.
 func envamize(key string) string {
-	return strings.Replace(strings.ToUpper(key), ".", "_", -1)
+	key = strings.ReplaceAll(key, "-", "_")
+	key = strings.ReplaceAll(key, ".", "_")
+	return strings.ToUpper(key)
 }
 
 func NewEnvSource() *EnvSource {
